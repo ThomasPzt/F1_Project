@@ -5,6 +5,7 @@ import pandas as pd
 
 from model import *
 from simulation import *
+from graphique import *
 
 
 def main():
@@ -56,19 +57,7 @@ def main():
 
         lap_number_value += num_simulations
 
-    # Plot des temps prédits en fonction du numéro du tour
-    for index, row in df_resultat.iterrows():
-        if row["DriverNumber"] == pilote:
-            color = 'red' if row["LapNumber"] in stand_tours else 'green'
-            plt.plot(row["LapNumber"], row["LapTime"], marker='o', color=color)
-        else:
-            plt.plot(row["LapNumber"], row["LapTime"], marker='o', color='blue')
-    plt.xlabel('Lap Number')
-    plt.ylabel('Predicted Lap Time (seconds)')
-    plt.title('Predicted Lap Time vs. Lap Number')
-    plt.grid(True)
-    plt.show()
-
-
+        GraphiqueClassement.afficher_classement(df_resultat)
+        GraphiqueClassement.afficher_temps_predit(df_resultat, pilote, stand_tours)
 if __name__ == "__main__":
     main()
