@@ -17,7 +17,7 @@ class Simulation:
         'Charles LECLERC': 16,
         'Oscar PIASTRI': 81,
         'Sergio PEREZ': 11,
-        'Max VERSTAPPEN': 33,
+        'Max VERSTAPPEN': 1,
         'Kevin MAGNUSSEN': 20,
         'George RUSSELL': 63,
         'Fernando ALONSO': 14,
