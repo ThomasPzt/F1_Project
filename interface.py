@@ -6,7 +6,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QTimer
 from PyQt5.QtWidgets import QListWidget, QListWidgetItem, QTableWidget, QTableWidgetItem
 import requests
 import random
-from model import *
+from simulation import *
 
 
 class ChoixCircuit(QWidget):
@@ -169,30 +169,11 @@ class ChoiceResume(QWidget):
             except requests.exceptions.RequestException as e:
                 print(f"Erreur lors de la récupération de l'image : {e}")
 
-        # Ajout d'un QLabel pour indiquer que le modèle est en cours de génération
-        self.model_generation_label = QLabel("Génération du modèle en cours...", self)
-        self.model_generation_label.setAlignment(Qt.AlignCenter)
-        self.model_generation_label.setFont(QFont("Arial", 20))
-        self.model_generation_label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(self.model_generation_label)
-
-        # Génération du modèle de simulation de course dans un délai différé
-        QTimer.singleShot(1000, self.generate_model)
-
-        self.setLayout(layout)
-
-    def generate_model(self):
-        # Génération du modèle de simulation de course
-        X, y = Model.create_dataframe("data.csv", [2022, 2023], self.selected_circuit)
-        self.model = Model.train_polynomial_regression_model(X, y)
-        # Model.plot_polynomial_predictions(model, X, y, Model.dico)
-        print("model done")
-
-        # Une fois le modèle généré, remplacer le message par le bouton pour lancer la simulation
-        self.model_generation_label.setText("")
+        # Ajout d'un bouton stylisé pour lancer la simulation
         button_lancer = QPushButton("Lancer la course", self)
         button_lancer.clicked.connect(self.emit_signal)
         button_lancer.setObjectName("lancer_button")
+        layout.addWidget(button_lancer)
 
         # Application du style CSS
         self.setStyleSheet(
@@ -202,7 +183,7 @@ class ChoiceResume(QWidget):
             }
 
             QPushButton#lancer_button {
-                background-color: green;
+                background-color: red;
                 color: white;
                 font-size: 20px;
                 border: none;
@@ -212,7 +193,7 @@ class ChoiceResume(QWidget):
             }
             """
         )
-        self.layout().addWidget(button_lancer)
+        self.setLayout(layout)
 
     @pyqtSlot()
     def emit_signal(self):
@@ -320,34 +301,15 @@ class ConditionsCourse(QWidget):
         self.selected_driver = selected_driver
         self.pilotes = pilotes
 
-        # Load drivers data from combined_result_with_drivers_2023.csv
-        drivers_data = pd.read_csv("combined_result_with_drivers_2023.csv")
+        # Utilisez les données pour créer votre modèle
+        # Par exemple :
+        self.X, self.y = Model.create_dataframe("data.csv", [2022, 2023], self.selected_circuit)
 
-        print(drivers_data['meeting_name'].unique())
-        print(self.selected_circuit)
-        circuit_number = drivers_data.loc[drivers_data['meeting_name'] == self.selected_circuit, 'meeting_number'].iloc[
-            0]
-
-        print(circuit_number)
-
-        # Load conditions data from combined_data_all_races.csv
-        conditions_data = pd.read_csv("data.csv")
-
-        # Align the dataframes on the 'CircuitNumber' column
-        aligned_conditions_data = conditions_data[conditions_data['CircuitNumber'] == circuit_number + 1]
-
-        # Filter conditions data for the circuit and driver at lap 2
-        self.current_conditions = aligned_conditions_data[
-            (aligned_conditions_data['LapNumber'] == 2) &
-            (aligned_conditions_data['DriverNumber'] == 44) &
-            (aligned_conditions_data['Year'] == 2023)
-            ]
-        # Check if there are rows in self.current_conditions before accessing iloc[0]
-        if not self.current_conditions.empty:
-            print(self.current_conditions)
-        else:
-            # Handle the case where self.current_conditions is empty
-            print("No matching conditions found.")
+        self.model = Model.train_polynomial_regression_model(self.X, self.y)
+        # Model.plot_polynomial_predictions(model, X, y, Model.dico)
+        print("Model done")
+        # Utilisation de la méthode data pour obtenir les données pour le pilote et le nombre de tours donnés
+        self.data = Simulation.data(self.X, self.selected_driver, 20)
 
         # Création du layout vertical pour organiser les widgets
         layout = QVBoxLayout()
@@ -363,12 +325,17 @@ class ConditionsCourse(QWidget):
         conditions_table.setColumnCount(2)
         conditions_table.setHorizontalHeaderLabels(["Condition", "Valeur"])
 
+        # Vérifier si la table a suffisamment de lignes
+        num_rows = len(["AirTemp", "Humidity", "Rainfall", "TrackTemp"])
+        if conditions_table.rowCount() < num_rows:
+            conditions_table.setRowCount(num_rows)
+
         # Ajout des données de conditions
-        for index, condition in enumerate(
-                ["AirTemp", "Humidity", "Pressure", "Rainfall", "TrackTemp", "WindDirection", "WindSpeed"]):
-            condition_value = self.current_conditions.iloc[0][condition]
+        for index, condition in enumerate(["AirTemp", "Humidity", "Rainfall", "TrackTemp"]):
+            condition_value = self.data[condition].values[0] if condition in self.data.columns else "N/A"
+            item = QTableWidgetItem(str(condition_value))  # Convertir en chaîne si ce n'est pas déjà le cas
             conditions_table.setItem(index, 0, QTableWidgetItem(condition))
-            conditions_table.setItem(index, 1, QTableWidgetItem(str(condition_value)))
+            conditions_table.setItem(index, 1, item)
 
         layout.addWidget(conditions_table)
 
