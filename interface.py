@@ -80,7 +80,6 @@ class ChoixDriver(QWidget):
         # Récupérer la liste des pilotes pour le circuit sélectionné depuis le fichier CSV
         self.drivers = list(Simulation.dico_pilotes.keys())
 
-
         layout = QVBoxLayout()
 
         label_pilote = QLabel(f"Choisissez votre pilote pour le circuit {circuit}", self)
@@ -297,49 +296,94 @@ class ConditionsCourse(QWidget):
         self.selected_driver = selected_driver
         self.pilotes = pilotes
 
-        # Utilisez les données pour créer votre modèle
-        # Par exemple :
-        self.X, self.y = Model.create_dataframe("data.csv", [2022, 2023], self.selected_circuit)
+        # Créer les layouts
+        self.layout = QVBoxLayout()
+        self.layout_superieur = QHBoxLayout()
+        self.layout_resume = QVBoxLayout()
+        self.layout_tableau = QVBoxLayout()
+        self.layout_mid = QHBoxLayout()
+        self.layout_classement_pilotes = QVBoxLayout()
+        self.layout_info_pneu = QVBoxLayout()
+        self.layout_tour_pneu = QVBoxLayout()
+        self.layout_pneu = QHBoxLayout()
 
-        self.model = Model.train_polynomial_regression_model(self.X, self.y)
-        # Model.plot_polynomial_predictions(model, X, y, Model.dico)
-        print("Model done")
-        # Utilisation de la méthode data pour obtenir les données pour le pilote et le nombre de tours donnés
+        # Initialiser les autres attributs
+        self.X, self.y = None, None
+        self.model = None
+        self.data = None
+        self.tour = 0
+        self.max_laps = 0
+        self.num_tour_same_compounds = 0
+        self.pneu = 'SOFT'
+
+        # Appeler les méthodes pour créer et configurer les widgets et layouts
+        self.setup_model()
+        self.max_laps = self.X["LapNumber"].max()
         self.data = Simulation.data(self.X, self.selected_driver, 1)
 
-        self.tour = 0
+        self.setup_layout_resume()
+        self.setup_layout_tableau()
+        self.layout.addLayout(self.layout_superieur)
 
-        max_laps = self.X["LapNumber"].max()
-        print(max_laps)
-        # Création du layout principal
-        layout = QVBoxLayout()
+        self.setup_layout_classement_pilotes()
+        self.setup_layout_info_pneu()
+        self.setup_layout_tour_pneu()
+        self.layout_mid.addLayout(self.layout_classement_pilotes)  # Ajouter le layout principal
+        self.layout_mid.addLayout(self.layout_info_pneu)  # Ajouter le layout principal
+        self.layout_mid.addLayout(self.layout_tour_pneu)
+        self.layout.addLayout(self.layout_mid)
 
-        # Création d'un layout horizontal pour les deux layouts supérieurs
-        top_layout = QHBoxLayout()
+        self.setup_layout_pneu()
+        self.layout.addLayout(self.layout_pneu)
+        self.setup_button_valider_pneu()
 
+        # Application du style CSS
+        self.setStyleSheet(
+            """
+            QLabel {
+                color: #333;
+            }
+
+            QPushButton {
+                background-color: #4CAF50;
+                color: white;
+                font-size: 18px;
+                border: none;
+                border-radius: 5px;
+                padding: 10px;
+                margin: 10px;
+            }
+            """
+        )
+
+        self.setLayout(self.layout)
+
+    def setup_model(self):
+        # Utilisez les données pour créer votre modèle
+        self.X, self.y = Model.create_dataframe("data.csv", [2022, 2023], self.selected_circuit)
+        self.model = Model.train_polynomial_regression_model(self.X, self.y)
+
+    def setup_layout_resume(self):
         # Layout pour le résumé (à gauche)
-        resume_layout = QVBoxLayout()
-        # Ajout d'un QLabel pour afficher le nom du circuit
-        circuit_label = QLabel(f"Circuit: {selected_circuit}", self)
-        circuit_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)  # Alignement en haut à gauche
+        circuit_label = QLabel(f"Circuit: {self.selected_circuit}", self)
+        circuit_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         circuit_label.setFont(QFont("Arial", 20))
-        resume_layout.addWidget(circuit_label)
+        self.layout_resume.addWidget(circuit_label)
 
-        tour_label = QLabel(f"Tour {self.tour} / {int(max_laps)}", self)
-        tour_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)  # Alignement en haut à gauche
+        tour_label = QLabel(f"Tour {self.tour} / {int(self.max_laps)}", self)
+        tour_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         tour_label.setFont(QFont("Arial", 20))
         tour_label.setStyleSheet("color: red;")
-        resume_layout.addWidget(tour_label)
+        self.layout_resume.addWidget(tour_label)
 
-        # Ajout d'un QLabel pour afficher le nom du pilote
-        driver_label = QLabel(f"Pilote: {selected_driver}", self)
-        driver_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)  # Alignement en haut à gauche
+        driver_label = QLabel(f"Pilote: {self.selected_driver}", self)
+        driver_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         driver_label.setFont(QFont("Arial", 20))
-        resume_layout.addWidget(driver_label)
+        self.layout_resume.addWidget(driver_label)
 
         drivers_df = pd.read_csv("combined_result_with_drivers_2023.csv")
-        headshot_url = drivers_df.loc[(drivers_df['meeting_name'] == selected_circuit) & (
-                drivers_df['full_name'] == selected_driver), 'headshot_url'].iloc[0]
+        headshot_url = drivers_df.loc[(drivers_df['meeting_name'] == self.selected_circuit) & (
+                drivers_df['full_name'] == self.selected_driver), 'headshot_url'].iloc[0]
         # Vérification de l'URL avant de faire la requête
         if headshot_url and not pd.isna(headshot_url) and isinstance(headshot_url, str):
             try:
@@ -350,22 +394,21 @@ class ConditionsCourse(QWidget):
                 headshot_label = QLabel(self)
                 headshot_label.setPixmap(pixmap)
                 headshot_label.setAlignment(Qt.AlignCenter)  # Alignement en haut à gauche
-                resume_layout.addWidget(headshot_label)
+                self.layout_resume.addWidget(headshot_label)
             except requests.exceptions.RequestException as e:
                 print(f"Erreur lors de la récupération de l'image : {e}")
-        top_layout.addLayout(resume_layout)
 
+        self.layout_superieur.addLayout(self.layout_resume)
+
+    def setup_layout_tableau(self):
         # Layout pour la table (à droite)
-        table_layout = QVBoxLayout()
-        # Affichage des conditions actuelles de la course
-        conditions_label = QLabel("Conditions actuelles de la course", self)
+        conditions_label = QLabel("Conditions Actuelles de la Course", self)
         conditions_label.setAlignment(Qt.AlignCenter)
         conditions_label.setStyleSheet("font-size: 20px; font-weight: bold;")
-        table_layout.addWidget(conditions_label)
-        # Ajout d'une table pour afficher les conditions
+        self.layout_tableau.addWidget(conditions_label)
+
         conditions_table = QTableWidget(self)
         conditions_table.setColumnCount(4)
-        # Vérifier si la table a suffisamment de lignes
         num_row = 2
         if conditions_table.rowCount() < num_row:
             conditions_table.setRowCount(num_row)
@@ -376,20 +419,16 @@ class ConditionsCourse(QWidget):
             item = QTableWidgetItem(str(condition_value))  # Convertir en chaîne si ce n'est pas déjà le cas
             conditions_table.setItem(0, index, QTableWidgetItem(condition))
             conditions_table.setItem(1, index, item)
-        table_layout.addWidget(conditions_table)
-        top_layout.addLayout(table_layout)
+        self.layout_tableau.addWidget(conditions_table)
+        self.layout_superieur.addLayout(self.layout_tableau)
 
-        # Ajout du layout horizontal contenant les layouts resume_layout et table_layout
-        layout.addLayout(top_layout)
-
-        mid_layout = QHBoxLayout()  # Layout global horizontal
-
+    def setup_layout_classement_pilotes(self):
         # Layout pour le classement des pilotes
-        graphique_layout = QVBoxLayout()
-        graphique_label = QLabel("Classement actuel", self)
+        graphique_label = QLabel("Classement actuel de la course", self)
         graphique_label.setAlignment(Qt.AlignCenter)
         graphique_label.setStyleSheet("font-size: 20px; font-weight: bold;")
-        graphique_layout.addWidget(graphique_label)
+        self.layout_classement_pilotes.addWidget(graphique_label)
+
         for i, pilote in enumerate(self.pilotes, start=1):
             label_pilote = QLabel(f"{i}. {pilote}", self)
             label_pilote.setAlignment(Qt.AlignCenter)
@@ -399,10 +438,61 @@ class ConditionsCourse(QWidget):
             background_color = "red" if pilote == self.selected_driver else "white"
             label_pilote.setStyleSheet(f"background-color: {background_color}; color: black;")
 
-            graphique_layout.addWidget(label_pilote)
+            self.layout_classement_pilotes.addWidget(label_pilote)
 
-        # Ajout des boutons de pneus
-        pneu_layout = QHBoxLayout()
+    def setup_layout_info_pneu(self):
+        # Layout pour le type de pneu
+        info_pneu_label = QLabel("Type de pneu", self)
+        info_pneu_label.setAlignment(Qt.AlignCenter)
+        info_pneu_label.setStyleSheet("font-size: 20px; font-weight: bold;")
+        self.layout_info_pneu.addWidget(info_pneu_label)
+
+        for pilote in self.pilotes:
+            pilote_num = Simulation.dico_pilotes.get(pilote, None)
+            if pilote == self.selected_driver:
+                pneu = self.pneu
+            else:
+                pilote_df = self.X[self.X["DriverNumber"] == pilote_num]
+                type_pneu = pilote_df["Compound"].values[0]
+                pneu = next(key for key, val in Model.dico.items() if val == type_pneu)
+
+            # Label pour le type de pneu
+            label_pneu = QLabel(f"{pneu}", self)
+            label_pneu.setAlignment(Qt.AlignCenter)
+            label_pneu.setFont(QFont("Arial", 10))
+            # Background color
+            background_color = "red" if pilote == self.selected_driver else "white"
+            label_pneu.setStyleSheet(f"background-color: {background_color}; color: black;")
+            self.layout_info_pneu.addWidget(label_pneu)
+
+    def setup_layout_tour_pneu(self):
+        # Layout pour le nombre de tours avec les mêmes pneus
+        tour_pneu_label = QLabel("Nombre de tour avec les mêmes pneus", self)
+        tour_pneu_label.setAlignment(Qt.AlignCenter)
+        tour_pneu_label.setStyleSheet("font-size: 20px; font-weight: bold;")
+        self.layout_tour_pneu.addWidget(tour_pneu_label)
+
+        for pilote in self.pilotes:
+            pilote_num = Simulation.dico_pilotes.get(pilote, None)
+            if pilote == self.selected_driver:
+                num_tour_same_type = self.num_tour_same_compounds
+            else:
+                pilote_df = self.X[self.X["DriverNumber"] == pilote_num]
+                type_pneu = pilote_df["Compound"].values[0]
+                num_tour_same_type = 0
+
+            # Label pour le nombre de tours avec les mêmes pneus
+            label_tpneu = QLabel(f"{num_tour_same_type}", self)
+            label_tpneu.setAlignment(Qt.AlignCenter)
+            label_tpneu.setFont(QFont("Arial", 10))
+            # Background color
+            background_color = "red" if pilote == self.selected_driver else "white"
+            label_tpneu.setStyleSheet(f"background-color: {background_color}; color: black;")
+            self.layout_tour_pneu.addWidget(label_tpneu)
+
+    def setup_layout_pneu(self):
+        # Layout pour les boutons de pneus
+        pneu_layout = QHBoxLayout()  # Créer un nouveau layout horizontal pour les boutons de pneus
 
         button_group = QButtonGroup(self)
         button_group.setExclusive(True)  # Un seul bouton peut être sélectionné à la fois
@@ -424,85 +514,14 @@ class ConditionsCourse(QWidget):
             button_group.addButton(pneu_button)
             if i == 0:  # Sélectionner le premier bouton par défaut
                 pneu_button.setChecked(True)
-                pneu_joueur = next(key for key, val in Model.dico.items() if val == i)
 
-        # Layout pour le type de pneu
-        info_pneu_layout = QVBoxLayout()
-        info_pneu_label = QLabel("Type de Pneu", self)
-        info_pneu_label.setAlignment(Qt.AlignCenter)
-        info_pneu_label.setStyleSheet("font-size: 20px; font-weight: bold;")
-        info_pneu_layout.addWidget(info_pneu_label)
+        self.layout_pneu.addLayout(pneu_layout)
 
-        # Layout pour le nombre de tours avec les mêmes pneus
-        tour_pneu_layout = QVBoxLayout()
-        tour_pneu_label = QLabel("Nombre de tour avec les mêmes pneus", self)
-        tour_pneu_label.setAlignment(Qt.AlignCenter)
-        tour_pneu_label.setStyleSheet("font-size: 20px; font-weight: bold;")
-        tour_pneu_layout.addWidget(tour_pneu_label)
-
-        for pilote in self.pilotes:
-            pilote_num = Simulation.dico_pilotes.get(pilote, None)
-            if pilote == self.selected_driver:
-                pneu = pneu_joueur
-                num_tour_same_type = 0
-            else:
-                pilote_df = self.X[self.X["DriverNumber"] == pilote_num]
-                type_pneu = pilote_df["Compound"].values[0]
-                pneu = next(key for key, val in Model.dico.items() if val == type_pneu)
-                num_tour_same_type = 0
-
-            # Label pour le type de pneu
-            label_pneu = QLabel(f"{pneu}", self)
-            label_pneu.setAlignment(Qt.AlignCenter)
-            label_pneu.setFont(QFont("Arial", 10))
-            # Background color
-            background_color = "red" if pilote == self.selected_driver else "white"
-            label_pneu.setStyleSheet(f"background-color: {background_color}; color: black;")
-            info_pneu_layout.addWidget(label_pneu)
-
-            # Label pour le nombre de tours avec les mêmes pneus
-            label_tpneu = QLabel(f"{num_tour_same_type}", self)
-            label_tpneu.setAlignment(Qt.AlignCenter)
-            label_tpneu.setFont(QFont("Arial", 10))
-            # Background color
-            label_tpneu.setStyleSheet(f"background-color: {background_color}; color: black;")
-            tour_pneu_layout.addWidget(label_tpneu)
-
-        # Ajouter les layouts verticaux au layout global horizontal
-        mid_layout.addLayout(graphique_layout)
-        mid_layout.addLayout(info_pneu_layout)
-        mid_layout.addLayout(tour_pneu_layout)
-
-        # Ajouter le layout global à votre disposition principale
-        layout.addLayout(mid_layout)
-
-        layout.addLayout(pneu_layout)
-
+    def setup_button_valider_pneu(self):
         # Ajout d'un bouton pour valider le choix
         button_valider_pneu = QPushButton("Valider le choix de pneus et lancer la course", self)
         button_valider_pneu.clicked.connect(self.emit_signal)
-        layout.addWidget(button_valider_pneu)
-
-        # Application du style CSS
-        self.setStyleSheet(
-            """
-            QLabel {
-                color: #333;
-            }
-
-            QPushButton {
-                background-color: #4CAF50;
-                color: white;
-                font-size: 18px;
-                border: none;
-                border-radius: 5px;
-                padding: 10px;
-                margin: 10px;
-            }
-            """
-        )
-        self.setLayout(layout)
-
+        self.layout.addWidget(button_valider_pneu)
 
     @pyqtSlot()
     def emit_signal(self):
