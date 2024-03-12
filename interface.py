@@ -303,6 +303,7 @@ class ConditionsCourse(QWidget):
         self.layout_tableau = QVBoxLayout()
         self.layout_mid = QHBoxLayout()
         self.layout_classement_pilotes = QVBoxLayout()
+        self.layout_temps_tour = QVBoxLayout()
         self.layout_info_pneu = QVBoxLayout()
         self.layout_tour_pneu = QVBoxLayout()
         self.layout_pneu = QHBoxLayout()
@@ -315,6 +316,12 @@ class ConditionsCourse(QWidget):
         self.max_laps = 0
         self.num_tour_same_compounds = 0
         self.pneu = 'SOFT'
+        self.df_resultat = pd.DataFrame(columns=["DriverNumber", "LapNumber", "LapTime", "Compound",
+                                                 "NumberOfLapsWithSameCompound", "AirTemp",
+                                                 "Humidity", "Rainfall", "TrackTemp"])
+        self.df_simu = pd.DataFrame(columns=["DriverNumber", "LapNumber", "Compound", "NumberOfLapsWithSameCompound"])
+        self.stand = False
+        self.stand_tours = []
 
         # Appeler les méthodes pour créer et configurer les widgets et layouts
         self.setup_model()
@@ -326,9 +333,11 @@ class ConditionsCourse(QWidget):
         self.layout.addLayout(self.layout_superieur)
 
         self.setup_layout_classement_pilotes()
+        self.setup_layout_temps_tour()
         self.setup_layout_info_pneu()
         self.setup_layout_tour_pneu()
         self.layout_mid.addLayout(self.layout_classement_pilotes)  # Ajouter le layout principal
+        self.layout_mid.addLayout(self.layout_temps_tour)
         self.layout_mid.addLayout(self.layout_info_pneu)  # Ajouter le layout principal
         self.layout_mid.addLayout(self.layout_tour_pneu)
         self.layout.addLayout(self.layout_mid)
@@ -440,6 +449,29 @@ class ConditionsCourse(QWidget):
 
             self.layout_classement_pilotes.addWidget(label_pilote)
 
+    def setup_layout_temps_tour(self):
+        # Layout pour le classement des pilotes
+        graphique_label = QLabel("Temps du dernier tour (sec)", self)
+        graphique_label.setAlignment(Qt.AlignCenter)
+        graphique_label.setStyleSheet("font-size: 20px; font-weight: bold;")
+        self.layout_temps_tour.addWidget(graphique_label)
+        for pilote in self.pilotes:
+            pilote_num = Simulation.dico_pilotes.get(pilote, None)
+            if self.tour == 0:
+                tmps_tour = 0.0
+            else:
+                tmps_tour = self.df_resultat[(self.df_resultat["DriverNumber"] == pilote_num) &
+                                             (self.df_resultat["LapNumber"] == self.tour)]["LapTime"].values[0]
+                tmps_tour = "{:.3f}".format(float(tmps_tour[0]))
+            # Label pour le type de pneu
+            label_tmps = QLabel(f"{tmps_tour}", self)
+            label_tmps.setAlignment(Qt.AlignCenter)
+            label_tmps.setFont(QFont("Arial", 10))
+            # Background color
+            background_color = "red" if pilote == self.selected_driver else "white"
+            label_tmps.setStyleSheet(f"background-color: {background_color}; color: black;")
+            self.layout_temps_tour.addWidget(label_tmps)
+
     def setup_layout_info_pneu(self):
         # Layout pour le type de pneu
         info_pneu_label = QLabel("Type de pneu", self)
@@ -449,12 +481,23 @@ class ConditionsCourse(QWidget):
 
         for pilote in self.pilotes:
             pilote_num = Simulation.dico_pilotes.get(pilote, None)
-            if pilote == self.selected_driver:
-                pneu = self.pneu
+            if self.tour == 0:
+                if pilote == self.selected_driver:
+                    pneu = self.pneu
+                else:
+                    pilote_df = self.X[self.X["DriverNumber"] == pilote_num]
+                    type_pneu = pilote_df["Compound"].values[0]
+                    pneu = next(key for key, val in Model.dico.items() if val == type_pneu)
             else:
-                pilote_df = self.X[self.X["DriverNumber"] == pilote_num]
-                type_pneu = pilote_df["Compound"].values[0]
-                pneu = next(key for key, val in Model.dico.items() if val == type_pneu)
+                if pilote == self.selected_driver:
+                    pneu = self.pneu
+                else:
+                    type_pneu = self.df_resultat[
+                        (self.df_resultat["DriverNumber"] == pilote_num) & (
+                                    self.df_resultat["LapNumber"] == self.tour)][
+                        "Compound"].values[0]
+                    pneu = next(key for key, val in Model.dico.items() if val == type_pneu)
+
 
             # Label pour le type de pneu
             label_pneu = QLabel(f"{pneu}", self)
@@ -478,8 +521,12 @@ class ConditionsCourse(QWidget):
                 num_tour_same_type = self.num_tour_same_compounds
             else:
                 pilote_df = self.X[self.X["DriverNumber"] == pilote_num]
-                type_pneu = pilote_df["Compound"].values[0]
-                num_tour_same_type = 0
+                if self.tour == 0:
+                    num_tour_same_type = 0
+                else:
+                    num_tour_same_type = self.df_resultat[
+                        (self.df_resultat["DriverNumber"] == pilote_num) & (self.df_resultat["LapNumber"] == self.tour)][
+                        "NumberOfLapsWithSameCompound"].values[0]
 
             # Label pour le nombre de tours avec les mêmes pneus
             label_tpneu = QLabel(f"{num_tour_same_type}", self)
@@ -520,8 +567,66 @@ class ConditionsCourse(QWidget):
     def setup_button_valider_pneu(self):
         # Ajout d'un bouton pour valider le choix
         button_valider_pneu = QPushButton("Valider le choix de pneus et lancer la course", self)
-        button_valider_pneu.clicked.connect(self.emit_signal)
+        button_valider_pneu.clicked.connect(self.simulation)
         self.layout.addWidget(button_valider_pneu)
+
+    def simulation(self):
+        self.tour += 1
+        self.num_tour_same_compounds += 1
+        print(f"Tour numéro {self.tour}")
+        """
+        num_simulations = int(input("Combien de tour voulez vous simulez ?"))
+        stand = input("Voulez vous faire un arrêt au stand ?(True or False)").lower() == "true"
+        if stand:
+            compound_value = input("Donnez le type de pneu, SOFT MEDIUM or HARD")
+            num_laps_value = 0
+            self.stand_tours.append(self.lap_number_value)
+        """
+        # Création d'un DataFrame pour stocker les valeurs initiales de la simulation
+        self.df_simu = pd.DataFrame({
+            "DriverNumber": [self.selected_driver],
+            "LapNumber": [self.tour],
+            "Compound": [Model.dico[self.pneu]],
+            "NumberOfLapsWithSameCompound": [self.num_tour_same_compounds]
+        })
+
+        # Exécuter la simulation
+        if not self.tour == 1:
+            self.df_resultat = pd.concat(
+                [self.df_resultat, Simulation.simulation(self.model, self.X, self.df_simu, 1, self.stand)])
+        else:
+            self.df_resultat = Simulation.simulation(self.model, self.X, self.df_simu, 1, self.stand)
+
+        self.pilotes = Simulation.update_ranking(self.df_resultat)
+        self.clear_layout(self.layout)
+
+        self.data = Simulation.data(self.X, self.selected_driver, self.tour)
+
+        self.setup_layout_resume()
+        self.setup_layout_tableau()
+        self.layout.addLayout(self.layout_superieur)
+
+        self.setup_layout_classement_pilotes()
+        self.setup_layout_temps_tour()
+        self.setup_layout_info_pneu()
+        self.setup_layout_tour_pneu()
+        self.layout_mid.addLayout(self.layout_classement_pilotes)  # Ajouter le layout principal
+        self.layout_mid.addLayout(self.layout_temps_tour)
+        self.layout_mid.addLayout(self.layout_info_pneu)  # Ajouter le layout principal
+        self.layout_mid.addLayout(self.layout_tour_pneu)
+        self.layout.addLayout(self.layout_mid)
+
+        self.setup_layout_pneu()
+        self.layout.addLayout(self.layout_pneu)
+        self.setup_button_valider_pneu()
+
+    def clear_layout(self, layout):
+        while layout.count():
+            child = layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+            elif child.layout():
+                self.clear_layout(child.layout())
 
     @pyqtSlot()
     def emit_signal(self):

@@ -43,6 +43,31 @@ class Simulation:
         return cumulative_times_per_driver_per_lap
 
     @staticmethod
+    def update_ranking(df_resultat):
+        cumulative_times_per_driver_per_lap = {}
+
+        for index, row in df_resultat.iterrows():
+            driver_number = row["DriverNumber"]
+            lap_time = row["LapTime"]
+            if driver_number in cumulative_times_per_driver_per_lap:
+                cumulative_times_per_driver_per_lap[driver_number].append(lap_time)
+            else:
+                cumulative_times_per_driver_per_lap[driver_number] = [lap_time]
+
+        num_laps = max(len(times) for times in cumulative_times_per_driver_per_lap.values())
+
+        for lap in range(1, num_laps + 1):
+            lap_cumulative_times = {}
+            for driver, times in cumulative_times_per_driver_per_lap.items():
+                if len(times) >= lap:
+                    lap_cumulative_times[driver] = times[lap - 1]
+            sorted_drivers = sorted(lap_cumulative_times, key=lambda x: lap_cumulative_times[x][0])
+        sorted_driver_names = [pilot_name for pilot_number in sorted_drivers for pilot_name, num in
+                               Simulation.dico_pilotes.items() if num == pilot_number]
+
+        return sorted_driver_names
+
+    @staticmethod
     def data(df, pilote, nbr_tour):
         pilote = Simulation.dico_pilotes.get(pilote, None)
         tour = nbr_tour
@@ -95,9 +120,32 @@ class Simulation:
                     type_pneu = df_value_simu["Compound"].values[0]
                     num_tour_same_type = df_value_simu["NumberOfLapsWithSameCompound"].values[0] + tour_simu
                 else:
-                    pilote_df = df[df["DriverNumber"] == driver]
-                    type_pneu = pilote_df["Compound"].values[0]
-                    num_tour_same_type = pilote_df["NumberOfLapsWithSameCompound"].values[0]
+                    pilote_df = pd.DataFrame()  # Initialisation avec un DataFrame vide
+                    tour_pilote = tour_ec  # Définissez tour_pilote à la valeur de tour_ec avant la première boucle
+
+                    # Tant qu'un tour valide n'a pas été trouvé et que le nombre de tours est inférieur au maximum
+                    while pilote_df.empty and tour_pilote < 57:
+                        pilote_df = df[(df["DriverNumber"] == driver) & (df["LapNumber"] == tour_pilote)]
+                        print(pilote_df)
+                        if not pilote_df.empty:
+                            type_pneu = pilote_df["Compound"].values[0]
+                            num_tour_same_type = pilote_df["NumberOfLapsWithSameCompound"].values[0]
+                        else:
+                            # Incrémentez le nombre de tours pour rechercher le tour suivant
+                            tour_pilote += 1
+
+                    # Si aucun tour valide n'est trouvé dans la plage initiale, recherchez en arrière
+                    if pilote_df.empty:
+                        tour_pilote = tour_ec - 1  # Décrémentation pour rechercher en arrière
+                        while pilote_df.empty and tour_pilote >= 0:
+                            pilote_df = df[(df["DriverNumber"] == driver) & (df["LapNumber"] == tour_pilote)]
+                            print(pilote_df)
+                            if not pilote_df.empty:
+                                type_pneu = pilote_df["Compound"].values[0]
+                                num_tour_same_type = pilote_df["NumberOfLapsWithSameCompound"].values[0]
+                            else:
+                                # Décrémentez le nombre de tours pour rechercher le tour précédent
+                                tour_pilote -= 1
                 # Simulation en fonction des données
                 tmp_tour = Model.predict_lap_time(model, driver, tour_ec, type_pneu, estimated_fuel,
                                                   num_tour_same_type,
