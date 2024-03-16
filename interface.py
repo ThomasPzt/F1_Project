@@ -308,6 +308,7 @@ class ConditionsCourse(QWidget):
         self.layout_tour_pneu = QVBoxLayout()
         self.layout_pneu = QHBoxLayout()
 
+
         # Initialiser les autres attributs
         self.X, self.y = None, None
         self.model = None
@@ -564,39 +565,48 @@ class ConditionsCourse(QWidget):
 
         self.layout_pneu.addLayout(pneu_layout)
 
-    def setup_button_valider_pneu(self):
-        # Ajout d'un bouton pour valider le choix
-        button_valider_pneu = QPushButton("Valider le choix de pneus et lancer la course", self)
-        button_valider_pneu.clicked.connect(self.simulation)
-        self.layout.addWidget(button_valider_pneu)
+    def setup_layout_stand(self):
+        # Layout pour l'image et le bouton sur la même ligne
+        stand_layout = QHBoxLayout()
 
-    def simulation(self):
-        self.tour += 1
-        self.num_tour_same_compounds += 1
-        print(f"Tour numéro {self.tour}")
-        """
-        num_simulations = int(input("Combien de tour voulez vous simulez ?"))
-        stand = input("Voulez vous faire un arrêt au stand ?(True or False)").lower() == "true"
-        if stand:
-            compound_value = input("Donnez le type de pneu, SOFT MEDIUM or HARD")
-            num_laps_value = 0
-            self.stand_tours.append(self.lap_number_value)
-        """
-        # Création d'un DataFrame pour stocker les valeurs initiales de la simulation
-        self.df_simu = pd.DataFrame({
-            "DriverNumber": [self.selected_driver],
-            "LapNumber": [self.tour],
-            "Compound": [Model.dico[self.pneu]],
-            "NumberOfLapsWithSameCompound": [self.num_tour_same_compounds]
-        })
+        # Ajouter une image de stand à gauche
+        stand_image = QLabel(self)
+        stand_pixmap = QPixmap("stand.png")
+        stand_image.setFixedSize(300, 100)
+        stand_image.setPixmap(stand_pixmap)
+        stand_layout.addWidget(stand_image)
 
-        # Exécuter la simulation
-        if not self.tour == 1:
-            self.df_resultat = pd.concat(
-                [self.df_resultat, Simulation.simulation(self.model, self.X, self.df_simu, 1, self.stand)])
-        else:
-            self.df_resultat = Simulation.simulation(self.model, self.X, self.df_simu, 1, self.stand)
+        # Ajouter un espace flexible pour pousser le bouton vers la droite
+        #stand_layout.addStretch()
 
+        # Ajouter un bouton cliquable pour l'arrêt au stand à droite
+        stand_button = QPushButton("Arrêt au stand", self)
+        stand_button.setStyleSheet("""
+            QPushButton {
+                background-color: #007bff; /* Bleu */
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                font-size: 16px;
+            }
+            QPushButton:hover {
+                background-color: #45a049; /* Vert */
+            }
+        """)
+        stand_button.clicked.connect(
+            self.handle_stand_button_click)  # Connecter le clic du bouton à une fonction de gestion d'événement
+        stand_layout.addWidget(stand_button)
+
+        stand_image2 = QLabel(self)
+        stand_pixmap = QPixmap("stand2.png")
+        stand_image2.setFixedSize(300, 100)
+        stand_image2.setPixmap(stand_pixmap)
+        stand_layout.addWidget(stand_image2)
+
+        # Ajouter le layout horizontal au layout principal
+        self.layout_pneu.addLayout(stand_layout)
+
+    def handle_stand_button_click(self):
         self.pilotes = Simulation.update_ranking(self.df_resultat)
         self.clear_layout(self.layout)
 
@@ -617,6 +627,56 @@ class ConditionsCourse(QWidget):
         self.layout.addLayout(self.layout_mid)
 
         self.setup_layout_pneu()
+        self.layout.addLayout(self.layout_pneu)
+        self.setup_button_valider_pneu()
+
+    def setup_button_valider_pneu(self):
+        # Ajout d'un bouton pour valider le choix
+        button_valider_pneu = QPushButton("Valider le choix de pneus et lancer le tour", self)
+        button_valider_pneu.clicked.connect(self.simulation)
+        self.layout.addWidget(button_valider_pneu)
+
+    def simulation(self):
+        if not self.tour == self.max_laps:
+            self.tour += 1
+            self.num_tour_same_compounds += 1
+            print(f"Tour numéro {self.tour}")
+
+            # Création d'un DataFrame pour stocker les valeurs initiales de la simulation
+            self.df_simu = pd.DataFrame({
+                "DriverNumber": [self.selected_driver],
+                "LapNumber": [self.tour],
+                "Compound": [Model.dico[self.pneu]],
+                "NumberOfLapsWithSameCompound": [self.num_tour_same_compounds]
+            })
+
+            # Exécuter la simulation
+            if not self.tour == 1:
+                self.df_resultat = pd.concat(
+                    [self.df_resultat, Simulation.simulation(self.model, self.X, self.df_simu, self.stand)])
+            else:
+                self.df_resultat = Simulation.simulation(self.model, self.X, self.df_simu, self.stand)
+
+        self.pilotes = Simulation.update_ranking(self.df_resultat)
+        self.clear_layout(self.layout)
+
+        self.data = Simulation.data(self.X, self.selected_driver, self.tour)
+
+        self.setup_layout_resume()
+        self.setup_layout_tableau()
+        self.layout.addLayout(self.layout_superieur)
+
+        self.setup_layout_classement_pilotes()
+        self.setup_layout_temps_tour()
+        self.setup_layout_info_pneu()
+        self.setup_layout_tour_pneu()
+        self.layout_mid.addLayout(self.layout_classement_pilotes)  # Ajouter le layout principal
+        self.layout_mid.addLayout(self.layout_temps_tour)
+        self.layout_mid.addLayout(self.layout_info_pneu)  # Ajouter le layout principal
+        self.layout_mid.addLayout(self.layout_tour_pneu)
+        self.layout.addLayout(self.layout_mid)
+
+        self.setup_layout_stand()
         self.layout.addLayout(self.layout_pneu)
         self.setup_button_valider_pneu()
 
@@ -663,7 +723,7 @@ class HomePage(QMainWindow):
         # Création du label pour afficher l'image
         image_label = QLabel(self.home_page)
         pixmap = QPixmap("logo.png")
-        pixmap = pixmap.scaledToWidth(500, 500)
+        pixmap = pixmap.scaledToWidth(750, 750)
         image_label.setPixmap(pixmap)
 
         # Ajout du label au layout centré horizontalement

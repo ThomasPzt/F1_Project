@@ -94,93 +94,74 @@ class Simulation:
         return air_temp_perturbe, humidity_perturbe, track_temp_perturbe
 
     @staticmethod
-    def simulation(model, df, df_value_simu, nbr_tour_simule, stand):
-        # Déclaration de la liste pour stocker les données simulées pour chaque tour
+    def simulation(model, df, df_value_simu, stand):
         simulated_data = []
-        # on prends les valeurs pour le pilote remplacé par le joueur
+
         pilote = df_value_simu["DriverNumber"].values[0]
         tour = df_value_simu["LapNumber"].values[0]
 
-        for tour_simu in range(nbr_tour_simule):
-            # on prend les mêmes valeurs pour tous les pilotes
-            # récupération des données fixes
-            tour_ec = tour + tour_simu
-            data = Simulation.data(df, pilote, tour_ec)
-            estimated_fuel = data["EstimatedFuel"].values[0]
-            air_temp = data["AirTemp"].values[0]
-            humidity = data["Humidity"].values[0]
-            rainfall = data["Rainfall"].values[0]
-            track_temp = data["TrackTemp"].values[0]
+        data = Simulation.data(df, pilote, tour)
+        estimated_fuel = data["EstimatedFuel"].values[0]
+        air_temp = data["AirTemp"].values[0]
+        humidity = data["Humidity"].values[0]
+        rainfall = data["Rainfall"].values[0]
+        track_temp = data["TrackTemp"].values[0]
 
-            # Ajouter une variation aléatoire aux données
-            # air_temp, humidity, track_temp = Simulation.rand_constante(air_temp, humidity, track_temp)
+        for driver in Simulation.liste_pilotes:
+            type_pneu = None
+            num_tour_same_type = None  # Réinitialisation pour chaque pilote
 
-            for driver in Simulation.liste_pilotes:
-                if driver == pilote:
-                    type_pneu = df_value_simu["Compound"].values[0]
-                    num_tour_same_type = df_value_simu["NumberOfLapsWithSameCompound"].values[0] + tour_simu
-                else:
-                    pilote_df = pd.DataFrame()  # Initialisation avec un DataFrame vide
-                    tour_pilote = tour_ec  # Définissez tour_pilote à la valeur de tour_ec avant la première boucle
+            if driver == pilote:
+                type_pneu = df_value_simu["Compound"].values[0]
+                num_tour_same_type = df_value_simu["NumberOfLapsWithSameCompound"].values[0]
+            else:
+                pilote_df = pd.DataFrame()
+                tour_pilote = tour
 
-                    # Tant qu'un tour valide n'a pas été trouvé et que le nombre de tours est inférieur au maximum
-                    while pilote_df.empty and tour_pilote < 57:
+                while pilote_df.empty and tour_pilote < 57:
+                    pilote_df = df[(df["DriverNumber"] == driver) & (df["LapNumber"] == tour_pilote)]
+                    if not pilote_df.empty:
+                        type_pneu = pilote_df["Compound"].values[0]
+                        num_tour_same_type = pilote_df["NumberOfLapsWithSameCompound"].values[0]
+                        if num_tour_same_type > tour:
+                            num_tour_same_type = tour
+                    else:
+                        tour_pilote += 1
+
+                if pilote_df.empty:
+                    tour_pilote = tour - 1
+                    while pilote_df.empty and tour_pilote >= 0:
                         pilote_df = df[(df["DriverNumber"] == driver) & (df["LapNumber"] == tour_pilote)]
-                        print(pilote_df)
                         if not pilote_df.empty:
                             type_pneu = pilote_df["Compound"].values[0]
                             num_tour_same_type = pilote_df["NumberOfLapsWithSameCompound"].values[0]
                         else:
-                            # Incrémentez le nombre de tours pour rechercher le tour suivant
-                            tour_pilote += 1
+                            tour_pilote -= 1
 
-                    # Si aucun tour valide n'est trouvé dans la plage initiale, recherchez en arrière
-                    if pilote_df.empty:
-                        tour_pilote = tour_ec - 1  # Décrémentation pour rechercher en arrière
-                        while pilote_df.empty and tour_pilote >= 0:
-                            pilote_df = df[(df["DriverNumber"] == driver) & (df["LapNumber"] == tour_pilote)]
-                            print(pilote_df)
-                            if not pilote_df.empty:
-                                type_pneu = pilote_df["Compound"].values[0]
-                                num_tour_same_type = pilote_df["NumberOfLapsWithSameCompound"].values[0]
-                            else:
-                                # Décrémentez le nombre de tours pour rechercher le tour précédent
-                                tour_pilote -= 1
-                # Simulation en fonction des données
-                tmp_tour = Model.predict_lap_time(model, driver, tour_ec, type_pneu, estimated_fuel,
-                                                  num_tour_same_type,
-                                                  air_temp, humidity, rainfall, track_temp,
-                                                  Model.dico)
-                # on a fait un tour en plus
-                # tour += 1
-                # incrémentation du nombre de tours avec les mêmes pneus
-                num_tour_same_type += 1
-                # on actualise le type de pneu (change qu'en cas d'arrêt au stand)
-                # si arrêt au stand, on réinitialise
-                if stand and driver == pilote:
-                    print(tmp_tour)
-                    tmp_tour += 3  # 3 secondes d'arrêt en moyenne
-                    print(tmp_tour)
-                    num_tour_same_type = 0
-                    stand = False
-                    print("arrêt au stand...")
-                # Création d'un dictionnaire contenant les valeurs simulées pour ce tour
-                tour_data = {
-                    "DriverNumber": driver,
-                    "LapNumber": tour_ec,
-                    "LapTime": tmp_tour,
-                    "Compound": type_pneu,
-                    "NumberOfLapsWithSameCompound": num_tour_same_type,
-                    "AirTemp": air_temp,
-                    "Humidity": humidity,
-                    "Rainfall": rainfall,
-                    "TrackTemp": track_temp
-                }
+            tmp_tour = Model.predict_lap_time(model, driver, tour, type_pneu, estimated_fuel,
+                                              num_tour_same_type,
+                                              air_temp, humidity, rainfall, track_temp,
+                                              Model.dico)
 
-                # Ajout des valeurs simulées à la liste
-                simulated_data.append(tour_data)
+            if stand and pilote == driver:
+                tmp_tour += 20
+                num_tour_same_type = 0
+                stand = False
 
-        # Créer un DataFrame à partir de la liste des données simulées
+            tour_data = {
+                "DriverNumber": driver,
+                "LapNumber": tour,
+                "LapTime": tmp_tour,
+                "Compound": type_pneu,
+                "NumberOfLapsWithSameCompound": num_tour_same_type,
+                "AirTemp": air_temp,
+                "Humidity": humidity,
+                "Rainfall": rainfall,
+                "TrackTemp": track_temp
+            }
+
+            simulated_data.append(tour_data)
+
         simuler = pd.DataFrame(simulated_data)
 
         return simuler
