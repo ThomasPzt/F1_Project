@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import QListWidget, QListWidgetItem, QTableWidget, QTableWi
 import requests
 import random
 from simulation import *
+from graphique import *
 
 
 class ChoixCircuit(QWidget):
@@ -301,6 +302,7 @@ class ConditionsCourse(QWidget):
         self.layout_superieur = QHBoxLayout()
         self.layout_resume = QVBoxLayout()
         self.layout_tableau = QVBoxLayout()
+        self.layout_graphiques_H = QHBoxLayout()
         self.layout_mid = QHBoxLayout()
         self.layout_classement_pilotes = QVBoxLayout()
         self.layout_temps_tour = QVBoxLayout()
@@ -434,6 +436,29 @@ class ConditionsCourse(QWidget):
         self.layout_tableau.addWidget(conditions_table)
         self.layout_superieur.addLayout(self.layout_tableau)
 
+    from PyQt5.QtGui import QPixmap, QImage
+
+    def layout_graphique(self):
+        # Générer et ajouter le premier graphique
+        image_buf_1 = GraphiqueClassement.afficher_classement(self.df_resultat)
+        pixmap_1 = QPixmap()
+        pixmap_1.loadFromData(image_buf_1.getvalue())
+        pixmap_1 = pixmap_1.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
+        label_1 = QLabel()
+        label_1.setPixmap(pixmap_1)
+        self.layout_graphiques_H.addWidget(label_1)
+        # Générer et ajouter le deuxième graphique
+        image_buf_2 = GraphiqueClassement.afficher_temps_predit(self.df_resultat, self.selected_driver,
+                                                                self.stand_tours)
+        pixmap_2 = QPixmap()
+        pixmap_2.loadFromData(image_buf_2.getvalue())
+        pixmap_2 = pixmap_2.scaled(400, 400, aspectRatioMode=Qt.KeepAspectRatio)
+        label_2 = QLabel()
+        label_2.setPixmap(pixmap_2)
+        self.layout_graphiques_H.addWidget(label_2)
+        # Ajouter le layout vertical contenant les graphiques au layout supérieur
+        self.layout_superieur.addLayout(self.layout_graphiques_H)
+
     def setup_layout_classement_pilotes(self):
         # Layout pour le classement des pilotes
         graphique_label = QLabel("Classement actuel de la course", self)
@@ -550,7 +575,6 @@ class ConditionsCourse(QWidget):
             if pilote == self.selected_driver:
                 num_tour_same_type = self.num_tour_same_compounds
             else:
-                pilote_df = self.X[self.X["DriverNumber"] == pilote_num]
                 if self.tour == 0:
                     num_tour_same_type = 0
                 else:
@@ -661,6 +685,7 @@ class ConditionsCourse(QWidget):
 
     def handle_stand_button_click(self):
         self.stand = 1
+        self.stand_tours.append(self.tour)
         self.pilotes = Simulation.update_ranking(self.df_resultat)
         self.clear_layout(self.layout)
 
@@ -668,6 +693,7 @@ class ConditionsCourse(QWidget):
 
         self.setup_layout_resume()
         self.setup_layout_tableau()
+        self.layout_graphique()
         self.layout.addLayout(self.layout_superieur)
 
         self.setup_layout_classement_pilotes()
@@ -694,6 +720,7 @@ class ConditionsCourse(QWidget):
 
     def simulation(self):
         if not self.tour == self.max_laps:
+            print(self.stand_tours)
             self.tour += 1
             self.num_tour_same_compounds += 1
             print(f"Tour numéro {self.tour}")
@@ -722,6 +749,7 @@ class ConditionsCourse(QWidget):
 
         self.setup_layout_resume()
         self.setup_layout_tableau()
+        self.layout_graphique()
         self.layout.addLayout(self.layout_superieur)
 
         self.setup_layout_classement_pilotes()
