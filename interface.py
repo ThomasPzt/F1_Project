@@ -304,10 +304,10 @@ class ConditionsCourse(QWidget):
         self.layout_mid = QHBoxLayout()
         self.layout_classement_pilotes = QVBoxLayout()
         self.layout_temps_tour = QVBoxLayout()
+        self.layout_temps_course = QVBoxLayout()
         self.layout_info_pneu = QVBoxLayout()
         self.layout_tour_pneu = QVBoxLayout()
         self.layout_pneu = QHBoxLayout()
-
 
         # Initialiser les autres attributs
         self.X, self.y = None, None
@@ -321,7 +321,7 @@ class ConditionsCourse(QWidget):
                                                  "NumberOfLapsWithSameCompound", "AirTemp",
                                                  "Humidity", "Rainfall", "TrackTemp"])
         self.df_simu = pd.DataFrame(columns=["DriverNumber", "LapNumber", "Compound", "NumberOfLapsWithSameCompound"])
-        self.stand = False
+        self.stand = 0
         self.stand_tours = []
 
         # Appeler les méthodes pour créer et configurer les widgets et layouts
@@ -335,10 +335,12 @@ class ConditionsCourse(QWidget):
 
         self.setup_layout_classement_pilotes()
         self.setup_layout_temps_tour()
+        self.setup_layout_temps_course()
         self.setup_layout_info_pneu()
         self.setup_layout_tour_pneu()
         self.layout_mid.addLayout(self.layout_classement_pilotes)  # Ajouter le layout principal
         self.layout_mid.addLayout(self.layout_temps_tour)
+        self.layout_mid.addLayout(self.layout_temps_course)
         self.layout_mid.addLayout(self.layout_info_pneu)  # Ajouter le layout principal
         self.layout_mid.addLayout(self.layout_tour_pneu)
         self.layout.addLayout(self.layout_mid)
@@ -473,6 +475,34 @@ class ConditionsCourse(QWidget):
             label_tmps.setStyleSheet(f"background-color: {background_color}; color: black;")
             self.layout_temps_tour.addWidget(label_tmps)
 
+    def setup_layout_temps_course(self):
+        # Layout pour le classement des pilotes
+        graphique_label = QLabel("Temps de course (sec)", self)
+        graphique_label.setAlignment(Qt.AlignCenter)
+        graphique_label.setStyleSheet("font-size: 20px; font-weight: bold;")
+        self.layout_temps_course.addWidget(graphique_label)
+
+        total_race_time = Simulation.calculate_total_race_time(self.df_resultat)
+        print(total_race_time)
+        for pilote in self.pilotes:
+            if self.tour == 0:
+                total_time = 0.0
+            else:
+                pilote_num = Simulation.dico_pilotes.get(pilote, None)
+                # Calcul de la somme des temps de tour pour le pilote actuel
+                total_time = total_race_time[pilote_num][0]
+            # Création du label avec la somme des temps de tour
+            label_tmps = QLabel(f"{total_time:.3f}", self)
+            label_tmps.setAlignment(Qt.AlignCenter)
+            label_tmps.setFont(QFont("Arial", 10))
+
+            # Background color
+            background_color = "red" if pilote == self.selected_driver else "white"
+            label_tmps.setStyleSheet(f"background-color: {background_color}; color: black;")
+
+            # Ajout du label au layout
+            self.layout_temps_course.addWidget(label_tmps)
+
     def setup_layout_info_pneu(self):
         # Layout pour le type de pneu
         info_pneu_label = QLabel("Type de pneu", self)
@@ -495,10 +525,9 @@ class ConditionsCourse(QWidget):
                 else:
                     type_pneu = self.df_resultat[
                         (self.df_resultat["DriverNumber"] == pilote_num) & (
-                                    self.df_resultat["LapNumber"] == self.tour)][
+                                self.df_resultat["LapNumber"] == self.tour)][
                         "Compound"].values[0]
                     pneu = next(key for key, val in Model.dico.items() if val == type_pneu)
-
 
             # Label pour le type de pneu
             label_pneu = QLabel(f"{pneu}", self)
@@ -526,7 +555,8 @@ class ConditionsCourse(QWidget):
                     num_tour_same_type = 0
                 else:
                     num_tour_same_type = self.df_resultat[
-                        (self.df_resultat["DriverNumber"] == pilote_num) & (self.df_resultat["LapNumber"] == self.tour)][
+                        (self.df_resultat["DriverNumber"] == pilote_num) & (
+                                self.df_resultat["LapNumber"] == self.tour)][
                         "NumberOfLapsWithSameCompound"].values[0]
 
             # Label pour le nombre de tours avec les mêmes pneus
@@ -563,7 +593,30 @@ class ConditionsCourse(QWidget):
             if i == 0:  # Sélectionner le premier bouton par défaut
                 pneu_button.setChecked(True)
 
+            # Connecter chaque bouton à une fonction de gestion d'événements distincte
+            if i == 0:
+                pneu_button.clicked.connect(self.handle_soft_pneu_click)
+            elif i == 1:
+                pneu_button.clicked.connect(self.handle_medium_pneu_click)
+            elif i == 2:
+                pneu_button.clicked.connect(self.handle_hard_pneu_click)
+
         self.layout_pneu.addLayout(pneu_layout)
+
+    def handle_soft_pneu_click(self):
+        self.pneu = "SOFT"
+        self.num_tour_same_compounds = 0
+        print("Pneu sélectionné : Soft")
+
+    def handle_medium_pneu_click(self):
+        self.pneu = "MEDIUM"
+        self.num_tour_same_compounds = 0
+        print("Pneu sélectionné : Medium")
+
+    def handle_hard_pneu_click(self):
+        self.pneu = "HARD"
+        self.num_tour_same_compounds = 0
+        print("Pneu sélectionné : Hard")
 
     def setup_layout_stand(self):
         # Layout pour l'image et le bouton sur la même ligne
@@ -577,7 +630,7 @@ class ConditionsCourse(QWidget):
         stand_layout.addWidget(stand_image)
 
         # Ajouter un espace flexible pour pousser le bouton vers la droite
-        #stand_layout.addStretch()
+        # stand_layout.addStretch()
 
         # Ajouter un bouton cliquable pour l'arrêt au stand à droite
         stand_button = QPushButton("Arrêt au stand", self)
@@ -607,6 +660,7 @@ class ConditionsCourse(QWidget):
         self.layout_pneu.addLayout(stand_layout)
 
     def handle_stand_button_click(self):
+        self.stand = 1
         self.pilotes = Simulation.update_ranking(self.df_resultat)
         self.clear_layout(self.layout)
 
@@ -618,10 +672,12 @@ class ConditionsCourse(QWidget):
 
         self.setup_layout_classement_pilotes()
         self.setup_layout_temps_tour()
+        self.setup_layout_temps_course()
         self.setup_layout_info_pneu()
         self.setup_layout_tour_pneu()
         self.layout_mid.addLayout(self.layout_classement_pilotes)  # Ajouter le layout principal
         self.layout_mid.addLayout(self.layout_temps_tour)
+        self.layout_mid.addLayout(self.layout_temps_course)
         self.layout_mid.addLayout(self.layout_info_pneu)  # Ajouter le layout principal
         self.layout_mid.addLayout(self.layout_tour_pneu)
         self.layout.addLayout(self.layout_mid)
@@ -657,6 +713,8 @@ class ConditionsCourse(QWidget):
             else:
                 self.df_resultat = Simulation.simulation(self.model, self.X, self.df_simu, self.stand)
 
+        self.stand = 0
+
         self.pilotes = Simulation.update_ranking(self.df_resultat)
         self.clear_layout(self.layout)
 
@@ -668,10 +726,12 @@ class ConditionsCourse(QWidget):
 
         self.setup_layout_classement_pilotes()
         self.setup_layout_temps_tour()
+        self.setup_layout_temps_course()
         self.setup_layout_info_pneu()
         self.setup_layout_tour_pneu()
         self.layout_mid.addLayout(self.layout_classement_pilotes)  # Ajouter le layout principal
         self.layout_mid.addLayout(self.layout_temps_tour)
+        self.layout_mid.addLayout(self.layout_temps_course)
         self.layout_mid.addLayout(self.layout_info_pneu)  # Ajouter le layout principal
         self.layout_mid.addLayout(self.layout_tour_pneu)
         self.layout.addLayout(self.layout_mid)

@@ -43,6 +43,25 @@ class Simulation:
         return cumulative_times_per_driver_per_lap
 
     @staticmethod
+    def calculate_total_race_time(df_resultat):
+        cumulative_times_per_driver_per_lap = {}
+
+        for index, row in df_resultat.iterrows():
+            driver_number = row["DriverNumber"]
+            lap_time = row["LapTime"]
+            if driver_number in cumulative_times_per_driver_per_lap:
+                cumulative_times_per_driver_per_lap[driver_number].append(lap_time)
+            else:
+                cumulative_times_per_driver_per_lap[driver_number] = [lap_time]
+
+        total_race_time_per_driver = {}
+
+        for driver_number, lap_times in cumulative_times_per_driver_per_lap.items():
+            total_race_time_per_driver[driver_number] = sum(lap_times)
+
+        return total_race_time_per_driver
+
+    @staticmethod
     def update_ranking(df_resultat):
         cumulative_times_per_driver_per_lap = {}
 
@@ -98,8 +117,8 @@ class Simulation:
         simulated_data = []
 
         pilote = df_value_simu["DriverNumber"].values[0]
+        pilote_num = Simulation.dico_pilotes.get(pilote, None)
         tour = df_value_simu["LapNumber"].values[0]
-
         data = Simulation.data(df, pilote, tour)
         estimated_fuel = data["EstimatedFuel"].values[0]
         air_temp = data["AirTemp"].values[0]
@@ -110,8 +129,7 @@ class Simulation:
         for driver in Simulation.liste_pilotes:
             type_pneu = None
             num_tour_same_type = None  # Réinitialisation pour chaque pilote
-
-            if driver == pilote:
+            if driver == pilote_num:
                 type_pneu = df_value_simu["Compound"].values[0]
                 num_tour_same_type = df_value_simu["NumberOfLapsWithSameCompound"].values[0]
             else:
@@ -143,10 +161,10 @@ class Simulation:
                                               air_temp, humidity, rainfall, track_temp,
                                               Model.dico)
 
-            if stand and pilote == driver:
+            if stand == 1 and driver == pilote_num:
                 tmp_tour += 20
                 num_tour_same_type = 0
-                stand = False
+                stand = 0
 
             tour_data = {
                 "DriverNumber": driver,
