@@ -15,8 +15,8 @@ class ChoixCircuit(QWidget):
     """
     Cette classe fournit un widget permettant à l'utilisateur de choisir un circuit et de lancer une simulation.
 
-    Signals:
-    - LancerSimulationClicked(str): Signal émis lorsque l'utilisateur clique sur le bouton pour lancer la simulation,
+    Attributes:
+    - LancerSimulationClicked(pyqtSignal): Signal émis lorsque l'utilisateur clique sur le bouton pour lancer la simulation,
       avec le nom du circuit sélectionné comme argument.
 
     Methods:
@@ -92,9 +92,26 @@ class ChoixCircuit(QWidget):
 
 
 class ChoixDriver(QWidget):
+    """
+    Cette classe permet de choisir un pilote pour une course sur un circuit spécifié.
+
+    Attributes:
+    - LancerClicked (pyqtSignal): Signal émis lors du clic sur le bouton pour lancer la course.
+
+    Methods:
+    - __init__(self, circuit, parent=None): Initialise l'interface graphique pour choisir un pilote.
+    - emit_signal(self): Émet le signal contenant le pilote sélectionné et le circuit choisi.
+    """
     LancerClicked = pyqtSignal(str, str)
 
     def __init__(self, circuit, parent=None):
+        """
+        Initialise l'interface de sélection du pilote pour une course sur un circuit donné.
+
+        Args:
+        - circuit (str): Le nom du circuit pour lequel choisir le pilote.
+        - parent: Le widget parent (par défaut None).
+        """
         super().__init__(parent)
         self.setWindowTitle("Choix du pilote")
         self.circuit = circuit
@@ -149,14 +166,39 @@ class ChoixDriver(QWidget):
         self.setLayout(layout)
 
     def emit_signal(self):
+        """
+        Émet un signal avec le pilote sélectionné et le circuit associé lorsque le bouton est cliqué.
+        """
         selected_driver = self.driver_combo.currentText()
         self.LancerClicked.emit(selected_driver, self.circuit)
 
 
 class ChoiceResume(QWidget):
+    """
+    Cette classe représente l'interface récapitulative permettant de lancer la simulation.
+    Elle affiche le nom du circuit sélectionné, le nom du pilote sélectionné ainsi que la photo du pilote le cas échéant.
+    Lorsque le bouton "Lancer la course" est cliqué, un signal est émis avec le nom du pilote et le nom du circuit associé.
+
+    Attributes:
+    - LancerSimulationClicked (pyqtSignal): Un signal émis lors du clic sur le bouton pour lancer la simulation.
+
+    Methods:
+    - __init__(selected_circuit, selected_driver, headshot_url, parent=None): Initialise l'interface récapitulative
+      avec le nom du circuit, le nom du pilote et l'URL de la photo du pilote.
+    - emit_signal(): Émet un signal avec le pilote sélectionné et le circuit associé lorsque le bouton est cliqué.
+    """
     LancerSimulationClicked = pyqtSignal(str, str)
 
     def __init__(self, selected_circuit, selected_driver, headshot_url, parent=None):
+        """
+        Initialise l'interface récapitulative pour lancer la simulation.
+
+        Args:
+        - selected_circuit (str): Le nom du circuit sélectionné.
+        - selected_driver (str): Le nom du pilote sélectionné.
+        - headshot_url (str): L'URL de la photo du pilote.
+        - parent: Le widget parent (par défaut None).
+        """
         super().__init__(parent)
 
         self.selected_circuit = selected_circuit
@@ -218,13 +260,38 @@ class ChoiceResume(QWidget):
 
     @pyqtSlot()
     def emit_signal(self):
+        """
+        Émet un signal avec le pilote sélectionné et le circuit associé lorsque le bouton est cliqué.
+        """
         self.LancerSimulationClicked.emit(self.selected_driver, self.selected_circuit)
 
 
 class SimulationQualidfication(QWidget):
+    """
+    Cette classe représente l'interface de simulation de la qualification.
+    Elle affiche la liste des pilotes dans un ordre aléatoire et permet de lancer la course.
+
+    Attributes:
+    - LancerCourseClicked (pyqtSignal): Un signal émis lors du clic sur le bouton pour lancer la course.
+
+    Methods:
+    - __init__(selected_circuit, selected_driver, parent=None): Initialise l'interface de simulation de la qualification
+      avec le nom du circuit sélectionné, le nom du pilote sélectionné et une liste de pilotes dans un ordre aléatoire.
+    - simuler_qualification(): Simule un classement aléatoire des pilotes.
+    - emit_signal(): Émet un signal pour lancer la course avec le pilote sélectionné, le circuit associé et la liste de pilotes.
+    """
     LancerCourseClicked = pyqtSignal(str, str, list)
 
     def __init__(self, selected_circuit, selected_driver, parent=None):
+        """
+        Initialise l'interface de simulation de la qualification avec le nom du circuit sélectionné,
+        le nom du pilote sélectionné et une liste de pilotes dans un ordre aléatoire.
+
+        Args:
+        - selected_circuit (str): Le nom du circuit sélectionné.
+        - selected_driver (str): Le nom du pilote sélectionné.
+        - parent (QWidget): Le widget parent, par défaut None.
+        """
         super().__init__(parent)
 
         self.selected_circuit = selected_circuit
@@ -286,39 +353,81 @@ class SimulationQualidfication(QWidget):
         self.setLayout(layout)
 
     def simuler_qualification(self):
-        # Récupérer la liste des pilotes pour le circuit sélectionné depuis le fichier CSV (vous pouvez ajuster le
-        # chemin)
-        pilotes = list(Simulation.dico_pilotes.keys())
+        """
+        Simule un classement aléatoire des pilotes pour la qualification.
 
-        # Simulation d'un classement aléatoire
+        Returns:
+        - pilotes (list): Une liste de noms de pilotes dans un ordre aléatoire.
+        """
+        pilotes = list(Simulation.dico_pilotes.keys())
         random.shuffle(pilotes)
         return pilotes
 
     @pyqtSlot()
     def emit_signal(self):
+        """
+        Émet un signal pour lancer la course avec le pilote sélectionné, le circuit associé et la liste de pilotes.
+        """
         if self.selected_driver not in self.pilotes_affiches:
-            # Afficher le nom du pilote uniquement s'il n'a pas encore été affiché
             label_pilote = QLabel(f"Nom du pilote : {self.selected_driver}", self)
             label_pilote.setAlignment(Qt.AlignCenter)
             label_pilote.setFont(QFont("Arial", 20))
             self.layout().addWidget(label_pilote)
-            self.pilotes_affiches.add(self.selected_driver)  # Ajouter le pilote à l'ensemble des pilotes déjà affichés
+            self.pilotes_affiches.add(self.selected_driver)
 
-        # Émettre le signal pour lancer la course
         self.LancerCourseClicked.emit(self.selected_driver, self.selected_circuit, self.pilotes)
 
 
-class ConditionsCourse(QWidget):
+class Course(QWidget):
+    """
+    Widget pour afficher et gérer les conditions de la course, les informations de la course et les choix de pneus.
+
+    Attributes:
+    - ChoixPneuClicked (pyqtSignal): Signal émis lorsqu'un choix de pneu est confirmé.
+
+    Methods:
+    - __init__: Initialise l'interface des conditions de la course.
+    - setup_model: Initialise le modèle pour la prédiction.
+    - setup_layout_resume: Configure le layout pour afficher les informations de résumé.
+    - setup_layout_tableau: Configure le layout pour afficher les conditions actuelles de la course.
+    - layout_graphique: Configure le layout pour afficher les graphiques de classement et de temps prédit.
+    - setup_layout_classement_pilotes: Configure le layout pour afficher le classement actuel des pilotes.
+    - setup_layout_temps_tour: Configure le layout pour afficher les temps du dernier tour.
+    - setup_layout_temps_course: Configure le layout pour afficher les temps de course total.
+    - setup_layout_info_pneu: Configure le layout pour afficher le type de pneu actuel.
+    - setup_layout_tour_pneu: Configure le layout pour afficher le nombre de tours avec les mêmes pneus.
+    - setup_layout_pneu: Configure le layout pour afficher les boutons de choix de pneus.
+    - handle_soft_pneu_click: Gère le clic sur le bouton du pneu souple.
+    - handle_medium_pneu_click: Gère le clic sur le bouton du pneu medium.
+    - handle_hard_pneu_click: Gère le clic sur le bouton du pneu dur.
+    - setup_layout_stand: Configure le layout pour afficher l'image et le bouton d'arrêt au stand.
+    - handle_stand_button_click: Gère le clic sur le bouton d'arrêt au stand.
+    - setup_button_valider_pneu: Configure le bouton pour valider le choix de pneus et lancer le tour.
+    - fin_course_top: Configure le layout pour afficher la fin de la course.
+    - layout_graphique_fin: Configure le layout pour afficher les graphiques à la fin de la course.
+    - simulation: Effectue la simulation de la course.
+    - clear_layout: Efface le contenu du layout.
+    - emit_signal: Émet un signal lorsqu'un choix de pneu est confirmé.
+    """
     ChoixPneuClicked = pyqtSignal(str)
 
     def __init__(self, selected_circuit, selected_driver, pilotes, parent=None):
+        """
+        Initialise l'interface des conditions de la course avec le nom du circuit sélectionné,
+        le nom du pilote sélectionné et une liste de pilotes.
+
+        Args:
+        - selected_circuit (str): Le nom du circuit sélectionné.
+        - selected_driver (str): Le nom du pilote sélectionné.
+        - pilotes (list): Une liste de noms de pilotes.
+        - parent (QWidget): Le widget parent, par défaut None.
+        """
         super().__init__(parent)
 
         self.selected_circuit = selected_circuit
         self.selected_driver = selected_driver
         self.pilotes = pilotes
 
-        # Créer les layouts
         self.layout = QVBoxLayout()
         self.layout_superieur = QHBoxLayout()
         self.layout_top_end = QHBoxLayout()
@@ -333,7 +442,6 @@ class ConditionsCourse(QWidget):
         self.layout_tour_pneu = QVBoxLayout()
         self.layout_pneu = QHBoxLayout()
 
-        # Initialiser les autres attributs
         self.X, self.y = None, None
         self.model = None
         self.data = None
@@ -348,7 +456,6 @@ class ConditionsCourse(QWidget):
         self.stand = 0
         self.stand_tours = []
 
-        # Appeler les méthodes pour créer et configurer les widgets et layouts
         self.setup_model()
         self.max_laps = self.X["LapNumber"].max()
         self.data = Simulation.data(self.X, self.selected_driver, 1)
@@ -362,10 +469,10 @@ class ConditionsCourse(QWidget):
         self.setup_layout_temps_course()
         self.setup_layout_info_pneu()
         self.setup_layout_tour_pneu()
-        self.layout_mid.addLayout(self.layout_classement_pilotes)  # Ajouter le layout principal
+        self.layout_mid.addLayout(self.layout_classement_pilotes)
         self.layout_mid.addLayout(self.layout_temps_tour)
         self.layout_mid.addLayout(self.layout_temps_course)
-        self.layout_mid.addLayout(self.layout_info_pneu)  # Ajouter le layout principal
+        self.layout_mid.addLayout(self.layout_info_pneu)
         self.layout_mid.addLayout(self.layout_tour_pneu)
         self.layout.addLayout(self.layout_mid)
 
@@ -373,7 +480,6 @@ class ConditionsCourse(QWidget):
         self.layout.addLayout(self.layout_pneu)
         self.setup_button_valider_pneu()
 
-        # Application du style CSS
         self.setStyleSheet(
             """
             QLabel {
@@ -395,12 +501,19 @@ class ConditionsCourse(QWidget):
         self.setLayout(self.layout)
 
     def setup_model(self):
-        # Utilisez les données pour créer votre modèle
+        """
+        Initialise le modèle en utilisant les données du fichier CSV.
+
+        """
         self.X, self.y = Model.create_dataframe("data.csv", [2022, 2023], self.selected_circuit)
         self.model = Model.train_polynomial_regression_model(self.X, self.y)
 
     def setup_layout_resume(self):
-        # Layout pour le résumé (à gauche)
+        """
+        Configure le layout pour afficher les informations de résumé sur le circuit, le pilote
+        sélectionné et une éventuelle photo du pilote.
+
+        """
         circuit_label = QLabel(f"Circuit: {self.selected_circuit}", self)
         circuit_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         circuit_label.setFont(QFont("Arial", 20))
@@ -420,16 +533,16 @@ class ConditionsCourse(QWidget):
         drivers_df = pd.read_csv("combined_result_with_drivers_2023.csv")
         headshot_url = drivers_df.loc[(drivers_df['meeting_name'] == self.selected_circuit) & (
                 drivers_df['full_name'] == self.selected_driver), 'headshot_url'].iloc[0]
-        # Vérification de l'URL avant de faire la requête
+
         if headshot_url and not pd.isna(headshot_url) and isinstance(headshot_url, str):
             try:
                 response = requests.get(headshot_url)
-                response.raise_for_status()  # Vérifier si la requête a réussi
+                response.raise_for_status()
                 pixmap = QPixmap()
                 pixmap.loadFromData(response.content)
                 headshot_label = QLabel(self)
                 headshot_label.setPixmap(pixmap)
-                headshot_label.setAlignment(Qt.AlignCenter)  # Alignement en haut à gauche
+                headshot_label.setAlignment(Qt.AlignCenter)
                 self.layout_resume.addWidget(headshot_label)
             except requests.exceptions.RequestException as e:
                 print(f"Erreur lors de la récupération de l'image : {e}")
@@ -437,7 +550,10 @@ class ConditionsCourse(QWidget):
         self.layout_superieur.addLayout(self.layout_resume)
 
     def setup_layout_tableau(self):
-        # Layout pour la table (à droite)
+        """
+        Configure le layout pour afficher les conditions actuelles de la course dans un tableau.
+
+        """
         conditions_label = QLabel("Conditions Actuelles de la Course", self)
         conditions_label.setAlignment(Qt.AlignCenter)
         conditions_label.setStyleSheet("font-size: 20px; font-weight: bold;")
@@ -449,7 +565,6 @@ class ConditionsCourse(QWidget):
         if conditions_table.rowCount() < num_row:
             conditions_table.setRowCount(num_row)
 
-        # Ajout des données de conditions
         for index, condition in enumerate(["AirTemp", "Humidity", "Rainfall", "TrackTemp"]):
             condition_value = self.data[condition].values[0] if condition in self.data.columns else "N/A"
             item = QTableWidgetItem(str(condition_value))  # Convertir en chaîne si ce n'est pas déjà le cas
@@ -458,10 +573,11 @@ class ConditionsCourse(QWidget):
         self.layout_tableau.addWidget(conditions_table)
         self.layout_superieur.addLayout(self.layout_tableau)
 
-    from PyQt5.QtGui import QPixmap, QImage
-
     def layout_graphique(self):
-        # Générer et ajouter le premier graphique
+        """
+        Configure le layout pour afficher les graphiques de classement et de temps prédit.
+
+        """
         image_buf_1 = GraphiqueClassement.afficher_classement(self.df_resultat)
         pixmap_1 = QPixmap()
         pixmap_1.loadFromData(image_buf_1.getvalue())
@@ -469,7 +585,7 @@ class ConditionsCourse(QWidget):
         label_1 = QLabel()
         label_1.setPixmap(pixmap_1)
         self.layout_graphiques_H.addWidget(label_1)
-        # Générer et ajouter le deuxième graphique
+
         image_buf_2 = GraphiqueClassement.afficher_temps_predit(self.df_resultat, self.selected_driver,
                                                                 self.stand_tours)
         pixmap_2 = QPixmap()
@@ -478,11 +594,13 @@ class ConditionsCourse(QWidget):
         label_2 = QLabel()
         label_2.setPixmap(pixmap_2)
         self.layout_graphiques_H.addWidget(label_2)
-        # Ajouter le layout vertical contenant les graphiques au layout supérieur
         self.layout_superieur.addLayout(self.layout_graphiques_H)
 
     def setup_layout_classement_pilotes(self):
-        # Layout pour le classement des pilotes
+        """
+        Configure le layout pour afficher le classement actuel des pilotes.
+
+        """
         graphique_label = QLabel("Classement actuel de la course", self)
         graphique_label.setAlignment(Qt.AlignCenter)
         graphique_label.setStyleSheet("font-size: 20px; font-weight: bold;")
@@ -493,14 +611,16 @@ class ConditionsCourse(QWidget):
             label_pilote.setAlignment(Qt.AlignCenter)
             label_pilote.setFont(QFont("Arial", 10))
 
-            # Set background color to red if it's the selected driver, otherwise use a different color
             background_color = "red" if pilote == self.selected_driver else "white"
             label_pilote.setStyleSheet(f"background-color: {background_color}; color: black;")
 
             self.layout_classement_pilotes.addWidget(label_pilote)
 
     def setup_layout_temps_tour(self):
-        # Layout pour le classement des pilotes
+        """
+        Configure le layout pour afficher les temps du dernier tour pour chaque pilote.
+
+        """
         graphique_label = QLabel("Temps du dernier tour (sec)", self)
         graphique_label.setAlignment(Qt.AlignCenter)
         graphique_label.setStyleSheet("font-size: 20px; font-weight: bold;")
@@ -513,17 +633,20 @@ class ConditionsCourse(QWidget):
                 tmps_tour = self.df_resultat[(self.df_resultat["DriverNumber"] == pilote_num) &
                                              (self.df_resultat["LapNumber"] == self.tour)]["LapTime"].values[0]
                 tmps_tour = "{:.3f}".format(float(tmps_tour[0]))
-            # Label pour le type de pneu
+
             label_tmps = QLabel(f"{tmps_tour}", self)
             label_tmps.setAlignment(Qt.AlignCenter)
             label_tmps.setFont(QFont("Arial", 10))
-            # Background color
+
             background_color = "red" if pilote == self.selected_driver else "white"
             label_tmps.setStyleSheet(f"background-color: {background_color}; color: black;")
             self.layout_temps_tour.addWidget(label_tmps)
 
     def setup_layout_temps_course(self):
-        # Layout pour le classement des pilotes
+        """
+        Configure le layout pour afficher les temps de course total pour chaque pilote.
+
+        """
         graphique_label = QLabel("Temps de course (sec)", self)
         graphique_label.setAlignment(Qt.AlignCenter)
         graphique_label.setStyleSheet("font-size: 20px; font-weight: bold;")
@@ -535,22 +658,23 @@ class ConditionsCourse(QWidget):
                 total_time = 0.0
             else:
                 pilote_num = Simulation.dico_pilotes.get(pilote, None)
-                # Calcul de la somme des temps de tour pour le pilote actuel
+
                 total_time = total_race_time[pilote_num][0]
-            # Création du label avec la somme des temps de tour
+
             label_tmps = QLabel(f"{total_time:.3f}", self)
             label_tmps.setAlignment(Qt.AlignCenter)
             label_tmps.setFont(QFont("Arial", 10))
 
-            # Background color
             background_color = "red" if pilote == self.selected_driver else "white"
             label_tmps.setStyleSheet(f"background-color: {background_color}; color: black;")
 
-            # Ajout du label au layout
             self.layout_temps_course.addWidget(label_tmps)
 
     def setup_layout_info_pneu(self):
-        # Layout pour le type de pneu
+        """
+        Configure le layout pour afficher le type de pneu actuel pour chaque pilote.
+
+        """
         info_pneu_label = QLabel("Type de pneu", self)
         info_pneu_label.setAlignment(Qt.AlignCenter)
         info_pneu_label.setStyleSheet("font-size: 20px; font-weight: bold;")
@@ -575,17 +699,19 @@ class ConditionsCourse(QWidget):
                         "Compound"].values[0]
                     pneu = next(key for key, val in Model.dico.items() if val == type_pneu)
 
-            # Label pour le type de pneu
             label_pneu = QLabel(f"{pneu}", self)
             label_pneu.setAlignment(Qt.AlignCenter)
             label_pneu.setFont(QFont("Arial", 10))
-            # Background color
+
             background_color = "red" if pilote == self.selected_driver else "white"
             label_pneu.setStyleSheet(f"background-color: {background_color}; color: black;")
             self.layout_info_pneu.addWidget(label_pneu)
 
     def setup_layout_tour_pneu(self):
-        # Layout pour le nombre de tours avec les mêmes pneus
+        """
+        Configure le layout pour afficher le nombre de tours avec les mêmes pneus pour chaque pilote.
+
+        """
         tour_pneu_label = QLabel("Nombre de tour avec les mêmes pneus", self)
         tour_pneu_label.setAlignment(Qt.AlignCenter)
         tour_pneu_label.setStyleSheet("font-size: 20px; font-weight: bold;")
@@ -604,21 +730,22 @@ class ConditionsCourse(QWidget):
                                 self.df_resultat["LapNumber"] == self.tour)][
                         "NumberOfLapsWithSameCompound"].values[0]
 
-            # Label pour le nombre de tours avec les mêmes pneus
             label_tpneu = QLabel(f"{num_tour_same_type}", self)
             label_tpneu.setAlignment(Qt.AlignCenter)
             label_tpneu.setFont(QFont("Arial", 10))
-            # Background color
+
             background_color = "red" if pilote == self.selected_driver else "white"
             label_tpneu.setStyleSheet(f"background-color: {background_color}; color: black;")
             self.layout_tour_pneu.addWidget(label_tpneu)
 
     def setup_layout_pneu(self):
-        # Layout pour les boutons de pneus
-        pneu_layout = QHBoxLayout()  # Créer un nouveau layout horizontal pour les boutons de pneus
+        """
+        Configure le layout pour afficher les boutons de choix de pneus.
 
+        """
+        pneu_layout = QHBoxLayout()
         button_group = QButtonGroup(self)
-        button_group.setExclusive(True)  # Un seul bouton peut être sélectionné à la fois
+        button_group.setExclusive(True)
 
         for i, pneu_image_path in enumerate(["soft.png", "medium.png", "hard.png"]):
             pneu_button = QRadioButton("", self)
@@ -635,10 +762,9 @@ class ConditionsCourse(QWidget):
                    """)
             pneu_layout.addWidget(pneu_button)
             button_group.addButton(pneu_button)
-            if i == 0:  # Sélectionner le premier bouton par défaut
+            if i == 0:
                 pneu_button.setChecked(True)
 
-            # Connecter chaque bouton à une fonction de gestion d'événements distincte
             if i == 0:
                 pneu_button.clicked.connect(self.handle_soft_pneu_click)
             elif i == 1:
@@ -649,35 +775,47 @@ class ConditionsCourse(QWidget):
         self.layout_pneu.addLayout(pneu_layout)
 
     def handle_soft_pneu_click(self):
+        """
+        Gère le clic sur le bouton du pneu soft.
+
+        """
         self.pneu = "SOFT"
         self.num_tour_same_compounds = 0
         print("Pneu sélectionné : Soft")
 
     def handle_medium_pneu_click(self):
+        """
+        Gère le clic sur le bouton du pneu medium.
+
+        """
         self.pneu = "MEDIUM"
         self.num_tour_same_compounds = 0
         print("Pneu sélectionné : Medium")
 
     def handle_hard_pneu_click(self):
+        """
+        Gère le clic sur le bouton du pneu hard.
+
+        """
         self.pneu = "HARD"
         self.num_tour_same_compounds = 0
         print("Pneu sélectionné : Hard")
 
     def setup_layout_stand(self):
-        # Layout pour l'image et le bouton sur la même ligne
+        """
+        Configure le layout pour afficher les images et le bouton d'arrêt au stand.
+
+        """
         stand_layout = QHBoxLayout()
 
-        # Ajouter une image de stand à gauche
         stand_image = QLabel(self)
         stand_pixmap = QPixmap("stand.png")
         stand_image.setFixedSize(300, 100)
         stand_image.setPixmap(stand_pixmap)
         stand_layout.addWidget(stand_image)
 
-        # Ajouter un espace flexible pour pousser le bouton vers la droite
         # stand_layout.addStretch()
 
-        # Ajouter un bouton cliquable pour l'arrêt au stand à droite
         stand_button = QPushButton("Arrêt au stand", self)
         stand_button.setStyleSheet("""
             QPushButton {
@@ -692,7 +830,7 @@ class ConditionsCourse(QWidget):
             }
         """)
         stand_button.clicked.connect(
-            self.handle_stand_button_click)  # Connecter le clic du bouton à une fonction de gestion d'événement
+            self.handle_stand_button_click)
         stand_layout.addWidget(stand_button)
 
         stand_image2 = QLabel(self)
@@ -701,10 +839,13 @@ class ConditionsCourse(QWidget):
         stand_image2.setPixmap(stand_pixmap)
         stand_layout.addWidget(stand_image2)
 
-        # Ajouter le layout horizontal au layout principal
         self.layout_pneu.addLayout(stand_layout)
 
     def handle_stand_button_click(self):
+        """
+        Gère le clic sur le bouton d'arrêt au stand.
+
+        """
         self.stand = 1
         self.stand_tours.append(self.tour+1)
         self.pilotes = Simulation.update_ranking(Simulation.calculate_total_race_time(self.df_resultat))
@@ -734,12 +875,19 @@ class ConditionsCourse(QWidget):
         self.setup_button_valider_pneu()
 
     def setup_button_valider_pneu(self):
-        # Ajout d'un bouton pour valider le choix
+        """
+        Configure le bouton pour valider le choix de pneus et lancer le tour.
+
+        """
         button_valider_pneu = QPushButton("Valider le choix de pneus et lancer le tour", self)
         button_valider_pneu.clicked.connect(self.simulation)
         self.layout.addWidget(button_valider_pneu)
 
     def fin_course_top(self):
+        """
+        Configure le layout pour afficher la fin de la course.
+
+        """
         fin_label = QLabel("FIN DE COURSE")
         fin_label.setAlignment(Qt.AlignCenter)
         fin_label.setFont(QFont("Arial", 35))
@@ -754,7 +902,10 @@ class ConditionsCourse(QWidget):
         self.layout_top_end.addLayout(self.layout_resume)
 
     def layout_graphique_fin(self):
-        # Générer et ajouter le premier graphique
+        """
+        Configure le layout pour afficher les graphiques à la fin de la course.
+
+        """
         image_buf_1 = GraphiqueClassement.afficher_classement(self.df_resultat)
         pixmap_1 = QPixmap()
         pixmap_1.loadFromData(image_buf_1.getvalue())
@@ -762,7 +913,7 @@ class ConditionsCourse(QWidget):
         label_1 = QLabel()
         label_1.setPixmap(pixmap_1)
         self.layout_graphiques_H.addWidget(label_1)
-        # Générer et ajouter le deuxième graphique
+
         image_buf_2 = GraphiqueClassement.afficher_temps_predit(self.df_resultat, self.selected_driver,
                                                                 self.stand_tours)
         pixmap_2 = QPixmap()
@@ -771,10 +922,14 @@ class ConditionsCourse(QWidget):
         label_2 = QLabel()
         label_2.setPixmap(pixmap_2)
         self.layout_graphiques_H.addWidget(label_2)
-        # Ajouter le layout vertical contenant les graphiques au layout supérieur
+
         self.layout_superieur.addLayout(self.layout_graphiques_H)
 
     def simulation(self):
+        """
+        Effectue la simulation de la course au tour par tour.
+
+        """
         if not self.tour == self.max_laps:
             self.tour += 1
             self.num_tour_same_compounds += 1
@@ -832,6 +987,13 @@ class ConditionsCourse(QWidget):
             self.layout.addLayout(self.layout_superieur)
 
     def clear_layout(self, layout):
+        """
+        Efface le contenu du layout.
+
+        Args:
+        - layout (QLayout): Le layout à effacer.
+
+        """
         while layout.count():
             child = layout.takeAt(0)
             if child.widget():
@@ -841,21 +1003,42 @@ class ConditionsCourse(QWidget):
 
     @pyqtSlot()
     def emit_signal(self):
+        """
+        Émet un signal lorsqu'un choix de pneu est confirmé.
+
+        """
         selected_pneu = self.pneu_combo.currentText()
         self.ChoixPneuClicked.emit(selected_pneu)
 
 
 class HomePage(QMainWindow):
+    """
+    Classe représentant la page d'accueil du simulateur de stratégie F1.
+
+    Attributes:
+    - home_page (QWidget): Le widget représentant la page d'accueil.
+
+    Methods:
+    - __init__: Initialise la page d'accueil du simulateur F1.
+    - show_circuit_page: Affiche la page de choix de circuit.
+    - show_driver_page: Affiche la page de choix de pilote.
+    - resumeChoice: Affiche le résumé du choix du pilote.
+    - lancer_simulation: Lance la simulation de la qualification.
+    - courses: Gère la simulation de la course.
+    - lancer_course: Lance la course.
+    """
     def __init__(self):
+        """
+        Initialise la page d'accueil du simulateur F1.
+
+        """
         super().__init__()
 
         self.setWindowTitle("F1 Strategy Simulator")
 
-        # Création de la page d'accueil
         self.home_page = QWidget(self)
         self.setWindowState(Qt.WindowMaximized)
 
-        # Création du layout vertical pour organiser les widgets
         layout = QVBoxLayout()
         self.home_page.setLayout(layout)
 
@@ -865,33 +1048,26 @@ class HomePage(QMainWindow):
         label_message.setObjectName("label_message_identifiant")
         layout.addWidget(label_message)
 
-        # Création du widget QLabel pour afficher l'image
         image_widget = QWidget(self.home_page)
         image_layout = QVBoxLayout(image_widget)
-        image_layout.setAlignment(Qt.AlignCenter)  # Centrer le contenu du layout
+        image_layout.setAlignment(Qt.AlignCenter)
         layout.addWidget(image_widget)
 
-        # Création du label pour afficher l'image
         image_label = QLabel(self.home_page)
         pixmap = QPixmap("logo.png")
         pixmap = pixmap.scaledToWidth(750, 750)
         image_label.setPixmap(pixmap)
 
-        # Ajout du label au layout centré horizontalement
         image_layout.addWidget(image_label)
 
-        # Ajout du widget contenant le logo au layout vertical principal
         layout.addWidget(image_widget)
 
-        # Ajout d'un bouton pour passer à la page suivante
         button_suivant = QPushButton("Suivant", self.home_page)
         button_suivant.clicked.connect(self.show_circuit_page)
         layout.addWidget(button_suivant)
 
-        # Application du style CSS aux boutons
         button_suivant.setObjectName("home_button")
 
-        # Configuration de la feuille de style CSS
         self.setStyleSheet(
             """
             QPushButton#home_button {
@@ -909,15 +1085,16 @@ class HomePage(QMainWindow):
             """
         )
 
-        # Affichage de la page d'accueil
         self.setCentralWidget(self.home_page)
 
     @pyqtSlot()
     def show_circuit_page(self):
-        # Récupérer la liste des circuits depuis le fichier CSV
+        """
+        Affiche la page de choix de circuit.
+
+        """
         circuits_df = pd.read_csv("combined_result_with_drivers_2023.csv")
         circuits = circuits_df['meeting_name'].unique().tolist()
-        # Créer la page de choix de circuit avec la liste des circuits
         circuit_page = ChoixCircuit(circuits, self)
 
         circuit_page.LancerSimulationClicked.connect(self.show_driver_page)
@@ -925,18 +1102,31 @@ class HomePage(QMainWindow):
 
     @pyqtSlot(str)
     def show_driver_page(self, selected_circuit):
+        """
+        Affiche la page de choix de pilote.
+
+        Args:
+        - selected_circuit (str): Le circuit sélectionné.
+
+        """
         if selected_circuit == "Pre-Season Testing":
             QMessageBox.warning(self, "Erreur", "La simulation n'est pas possible pour Pre-Season Testing.")
             return
 
-        # Créer la page de choix de pilote avec la liste des pilotes pour le circuit sélectionné
         driver_page = ChoixDriver(selected_circuit, self)
         driver_page.LancerClicked.connect(self.resumeChoice)
         self.setCentralWidget(driver_page)
 
     @pyqtSlot(str, str)
     def resumeChoice(self, selected_driver, selected_circuit):
-        # Récupérer l'URL de la photo du pilote depuis le fichier CSV
+        """
+        Affiche le résumé du choix du pilote.
+
+        Args:
+        - selected_driver (str): Le pilote sélectionné.
+        - selected_circuit (str): Le circuit sélectionné.
+
+        """
         drivers_df = pd.read_csv("combined_result_with_drivers_2023.csv")
         headshot_url = drivers_df.loc[(drivers_df['meeting_name'] == selected_circuit) & (
                 drivers_df['full_name'] == selected_driver), 'headshot_url'].iloc[0]
@@ -947,21 +1137,32 @@ class HomePage(QMainWindow):
 
     @pyqtSlot(str, str)
     def lancer_simulation(self, selected_driver, selected_circuit):
-        # Lancer la simulation de la qualification ici
+        """
+        Lance la simulation de la qualification.
+
+        Args:
+        - selected_driver (str): Le pilote sélectionné.
+        - selected_circuit (str): Le circuit sélectionné.
+
+        """
         simulation_qualification = SimulationQualidfication(selected_circuit, selected_driver, self)
-        simulation_qualification.LancerCourseClicked.connect(self.conditions_courses)
+        simulation_qualification.LancerCourseClicked.connect(self.courses)
         self.setCentralWidget(simulation_qualification)
 
     @pyqtSlot(str, str, list)
-    def conditions_courses(self, selected_driver, selected_circuit, pilotes):
-        course_choix = ConditionsCourse(selected_circuit, selected_driver, pilotes, self)
-        course_choix.ChoixPneuClicked.connect(self.lancer_course)
+    def courses(self, selected_driver, selected_circuit, pilotes):
+        """
+        Gère la simulation de la course.
+
+        Args:
+        - selected_driver (str): Le pilote sélectionné.
+        - selected_circuit (str): Le circuit sélectionné.
+        - pilotes (list): La liste des pilotes.
+
+        """
+        course_choix = Course(selected_circuit, selected_driver, pilotes, self)
         self.setCentralWidget(course_choix)
         print(f"Course lancée avec le pilote {selected_driver} dans le cricuit {selected_circuit}")
-
-    def lancer_course(self):
-        print("course lancée")
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
