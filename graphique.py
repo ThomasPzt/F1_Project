@@ -4,11 +4,55 @@ from io import BytesIO
 
 
 class GraphiqueClassement:
+    class GraphiqueClassement:
+        """
+        Cette classe fournit des fonctionnalités pour afficher le classement des pilotes par tour et les temps prédits
+        par tour avec une couleur différente pour un pilote spécifique.
+
+        Attributes:
+        - liste_pilotes (list): Une liste des numéros des pilotes.
+        - dico_pilotes (dict): Un dictionnaire contenant les correspondances entre les noms des pilotes et leurs numéros.
+
+        Methods:
+        - afficher_classement(df_resultat): Affiche le classement des pilotes par tour.
+        - afficher_temps_predit(df_resultat, pilote, stand): Affiche le temps prédit par tour avec une couleur différente
+          pour un pilote spécifique.
+        """
 
     liste_pilotes = [1, 2, 4, 10, 11, 14, 16, 18, 20, 21, 22, 23, 24, 27, 31, 44, 55, 63, 77, 81]
-
+    dico_pilotes = {
+        'Alexander ALBON': 23,
+        'Pierre GASLY': 10,
+        'Lance STROLL': 18,
+        'Esteban OCON': 31,
+        'Yuki TSUNODA': 22,
+        'Logan SARGEANT': 2,
+        'ZHOU Guanyu': 24,
+        'Lando NORRIS': 4,
+        'Carlos SAINZ': 55,
+        'Charles LECLERC': 16,
+        'Oscar PIASTRI': 81,
+        'Sergio PEREZ': 11,
+        'Max VERSTAPPEN': 1,
+        'Kevin MAGNUSSEN': 20,
+        'George RUSSELL': 63,
+        'Fernando ALONSO': 14,
+        'Nico HULKENBERG': 27,
+        'Nyck DE VRIES': 21,
+        'Valtteri BOTTAS': 77,
+        'Lewis HAMILTON': 44
+    }
     @staticmethod
     def afficher_classement(df_resultat):
+        """
+        Affiche le classement des pilotes par tour.
+
+        Args:
+        - df_resultat (DataFrame): Le DataFrame contenant les résultats de la course.
+
+        Returns:
+        - buf (BytesIO): Un objet BytesIO contenant l'image du graphique.
+        """
         cumulative_times_per_driver_per_lap = {}
 
         for index, row in df_resultat.iterrows():
@@ -62,14 +106,25 @@ class GraphiqueClassement:
 
     @staticmethod
     def afficher_temps_predit(df_resultat, pilote, stand):
-        fig, ax = plt.subplots()
+        """
+        Affiche le temps prédit par tour avec une couleur différente pour un pilote spécifique.
 
+        Args:
+        - df_resultat (DataFrame): Le DataFrame contenant les résultats de la course.
+        - pilote (string): Le nom du pilote pour lequel changer la couleur des temps prédits.
+        - stand (list): Une liste des tours où le pilote est censé être aux stands.
+
+        Returns:
+        - buf (BytesIO): Un objet BytesIO contenant l'image du graphique.
+        """
+        fig, ax = plt.subplots()
+        pilote = GraphiqueClassement.dico_pilotes.get(pilote, None)
         for index, row in df_resultat.iterrows():
             if row["DriverNumber"] == pilote:
-                color = 'red' if row["LapNumber"] in stand else 'green'
+                color = 'green' if row["LapNumber"] in stand else 'red'
                 ax.plot(row["LapNumber"], row["LapTime"], marker='o', color=color)
             else:
-                ax.plot(row["LapNumber"], row["LapTime"], marker='o', color='blue')
+                ax.plot(row["LapNumber"], row["LapTime"], marker='.', color='blue')
 
         ax.set_xlabel('Lap Number')
         ax.set_ylabel('Predicted Lap Time (seconds)')

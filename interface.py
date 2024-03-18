@@ -509,7 +509,6 @@ class ConditionsCourse(QWidget):
         self.layout_temps_course.addWidget(graphique_label)
 
         total_race_time = Simulation.calculate_total_race_time(self.df_resultat)
-        print(total_race_time)
         for pilote in self.pilotes:
             if self.tour == 0:
                 total_time = 0.0
@@ -686,7 +685,7 @@ class ConditionsCourse(QWidget):
 
     def handle_stand_button_click(self):
         self.stand = 1
-        self.stand_tours.append(self.tour)
+        self.stand_tours.append(self.tour+1)
         self.pilotes = Simulation.update_ranking(Simulation.calculate_total_race_time(self.df_resultat))
         self.clear_layout(self.layout)
 
@@ -756,10 +755,8 @@ class ConditionsCourse(QWidget):
 
     def simulation(self):
         if not self.tour == self.max_laps:
-            print(self.stand_tours)
             self.tour += 1
             self.num_tour_same_compounds += 1
-            print(f"Tour numéro {self.tour}")
 
             # Création d'un DataFrame pour stocker les valeurs initiales de la simulation
             self.df_simu = pd.DataFrame({
