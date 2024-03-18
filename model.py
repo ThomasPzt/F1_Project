@@ -1,10 +1,9 @@
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 # from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
+#from sklearn.metrics import mean_squared_error
 
 
 # LIEN DE TRAVAIL
@@ -12,7 +11,29 @@ from sklearn.metrics import mean_squared_error
 # https://www.w3schools.com/python/python_ml_decision_tree.asp
 
 class Model:
-    # global
+    """
+     Cette classe fournit des fonctionnalités pour la création de DataFrame à partir de fichiers CSV,
+     l'entraînement de modèles de régression polynomiale, la visualisation des prédictions et la prédiction
+     du temps de tour en fonction des caractéristiques spécifiées.
+
+     Attributes:
+     - dico (dict): Un dictionnaire contenant les correspondances entre les types de pneus ('SOFT', 'MEDIUM', 'HARD')
+       et les scalaires.
+     - dico_circuit (dict): Un dictionnaire contenant les correspondances entre les noms des circuits et leurs
+       identifiants numériques.
+
+     Methods:
+     - create_dataframe(file_path, year, circuit): Crée un DataFrame à partir d'un fichier CSV, filtré par année
+       et circuit spécifiés.
+     - train_polynomial_regression_model(X, y, degree=3): Entraîne un modèle de régression polynomiale sur l'ensemble
+       de données fourni.
+     - plot_polynomial_predictions(model, X, y, dico): Réalise les prédictions avec un modèle de régression polynomiale
+       donné et affiche les résultats.
+     - predict_lap_time(model, pilote, lap_number, compound, estimated_fuel, num_laps_same_compound, air_temp, humidity,
+                        rainfall, track_temp, dico, degree=3): Prédit le temps au tour en fonction des caractéristiques
+       spécifiées et affiche le résultat.
+     """
+
     dico = {'SOFT': 0, 'MEDIUM': 1, 'HARD': 2}
     dico_circuit = {
         'Bahrain Grand Prix': 1,
@@ -40,27 +61,32 @@ class Model:
 
     @staticmethod
     def create_dataframe(file_path, year, circuit):
-        # Lecture du fichier CSV
+        """
+        Crée un DataFrame à partir d'un fichier CSV, filtré par année et circuit spécifiés.
+
+        Args:
+        - file_path (str): Le chemin du fichier CSV.
+        - year (list): Liste des années à inclure.
+        - circuit (str): Le nom du circuit.
+
+        Returns:
+        - X (DataFrame): Les features.
+        - y (Series): La variable cible.
+        """
         circuit_number = Model.dico_circuit.get(circuit, None)
         data = pd.read_csv(file_path)
-        # Suppression des lignes avec des valeurs manquantes
         df = data.dropna(axis=0, how='any')
-        # Filtrage pour le numéro de circuit spécifique et les années 2022 et 2023
         df = df[df['CircuitNumber'] == circuit_number]
         df = df[(df['Year'] == year[0]) | (df['Year'] == year[1])]
 
-        # Sélection des colonnes pertinentes
         X = df[["DriverNumber", "LapNumber", "Compound", "EstimatedFuel",
                 "NumberOfLapsWithSameCompound", "AirTemp", "Humidity",
                 "Rainfall", "TrackTemp"]].copy()
 
-        # scalaires pour la colonne "Compound"
         X["Compound"] = X["Compound"].map(Model.dico)
 
-        # Suppression des lignes où Compound est UNKNOWN
         X = X[X['Compound'] != 'UNKNOWN']
 
-        # LapTime -> cible (y)
         y = df["LapTime"]
 
         return X, y
@@ -77,7 +103,6 @@ class Model:
 
         Returns:
         - model (LinearRegression): Le modèle entraîné.
-        - rmse (float): La racine de l'erreur quadratique moyenne du modèle sur les données d'entraînement.
         """
         # Transformation polynomiale des features
         poly = PolynomialFeatures(degree=degree, include_bias=False)
@@ -87,15 +112,11 @@ class Model:
         poly_reg_model = LinearRegression()
         poly_reg_model.fit(poly_features, y)
 
-        # Prédictions sur l'ensemble complet de données
         #y_predicted = poly_reg_model.predict(poly_features)
-
-        # Calcul de la racine de l'erreur quadratique moyenne (RMSE)
         #rmse = np.sqrt(mean_squared_error(y, y_predicted))
-
         # print("RMSE:", rmse)
 
-        return poly_reg_model # , rmse
+        return poly_reg_model
 
     ################################################
     @staticmethod
@@ -147,12 +168,13 @@ class Model:
     @staticmethod
     def predict_lap_time(model, pilote, lap_number, compound, estimated_fuel, num_laps_same_compound, air_temp, humidity,
                          rainfall,
-                         track_temp, dico, degree=3):
+                         track_temp, degree=3):
         """
         Prédit le temps au tour en fonction des caractéristiques spécifiées et affiche le résultat.
 
         Args:
         - model (LinearRegression): Le modèle de régression polynomiale entraîné.
+        - pilote (int): Le numéro du pilote.
         - lap_number (int): Le numéro du tour de piste.
         - compound (str): Le type de pneu ('SOFT', 'MEDIUM', ou 'HARD').
         - estimated_fuel (float): Le carburant estimé restant dans le réservoir.
@@ -161,11 +183,9 @@ class Model:
         - humidity (float): L'humidité de l'air.
         - rainfall (float): La quantité de pluie.
         - track_temp (float): La température de la piste.
-        - driver_number (int): Le numéro du pilote.
-        - dico (dict): Le dictionnaire de correspondance entre les types de pneus et les scalaires.
 
         Returns:
-        - None
+        - lap_time_prediction (float): Le temps prédit pour le tour.
         """
         # Préparer les données pour la prédiction
         data_for_prediction = pd.DataFrame({"DriverNumber": [pilote],
@@ -181,12 +201,5 @@ class Model:
         # Prédire le temps au tour
         poly = PolynomialFeatures(degree=degree, include_bias=False)
         lap_time_prediction = model.predict(poly.fit_transform(data_for_prediction))
-
-        # Convertir le temps en minutes et secondes
-        minutes = int(lap_time_prediction[0] // 60)
-        secondes = int(lap_time_prediction[0] % 60)
-
-        # Afficher le temps au tour prédit
-        #print(f"Prédiction - Temps au tour : {minutes} min {secondes} sec")
 
         return lap_time_prediction

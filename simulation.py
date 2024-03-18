@@ -144,8 +144,7 @@ class Simulation:
 
             tmp_tour = Model.predict_lap_time(model, driver, tour, type_pneu, estimated_fuel,
                                               num_tour_same_type,
-                                              air_temp, humidity, rainfall, track_temp,
-                                              Model.dico)
+                                              air_temp, humidity, rainfall, track_temp)
 
             if stand == 1 and driver == pilote_num:
                 tmp_tour += 20
