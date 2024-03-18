@@ -3,6 +3,25 @@ from model import *
 
 
 class Simulation:
+    """
+    Cette classe fournit des fonctionnalités pour la simulation de courses de Formule 1, y compris la qualification,
+    le calcul du temps de course total par pilote, la mise à jour du classement, la récupération des données
+    de course pour un tour spécifique, la génération de perturbations aléatoires pour les données météorologiques,
+    et la simulation de la course.
+
+    Attributes:
+    - liste_pilotes (list): Liste des numéros de pilotes.
+    - dico_pilotes (dict): Dictionnaire de correspondance entre les noms des pilotes et leurs numéros.
+
+    Methods:
+    - qualification(liste): Simule la qualification en attribuant des temps cumulés aux pilotes.
+    - calculate_total_race_time(df_resultat): Calcule le temps total de course par pilote.
+    - update_ranking(total_race_time_per_driver): Met à jour le classement en fonction du temps total de course.
+    - data(df, pilote, nbr_tour): Récupère les données de course pour un pilote spécifique et un tour donné.
+    - rand_constante(air_temp, humidity, track_temp): Génère des perturbations aléatoires pour les données météorologiques.
+    - simulation(model, df, df_value_simu, stand): Simule la course en prédisant les temps au tour pour chaque pilote.
+    """
+
     liste_pilotes = [1, 2, 4, 10, 11, 14, 16, 18, 20, 21, 22, 23, 24, 27, 31, 44, 55, 63, 77, 81]
     dico_pilotes = {
         'Alexander ALBON': 23,
@@ -29,21 +48,37 @@ class Simulation:
 
     @staticmethod
     def qualification(liste):
-        cumulative_times_per_driver_per_lap = {}  # Dictionnaire pour stocker les temps cumulés par pilote
-        time_increment = 0  # Incrément de temps initial
+        """
+        Simule la qualification en attribuant des temps cumulés aux pilotes.
+
+        Args:
+        - liste (list): Liste des noms des pilotes participants à la qualification.
+
+        Returns:
+        - cumulative_times_per_driver_per_lap (dict): Dictionnaire contenant les temps cumulés par pilote.
+        """
+        cumulative_times_per_driver_per_lap = {}
+        time_increment = 0
 
         for driver_name in liste:
             driver_number = Simulation.dico_pilotes.get(driver_name, None)
-            # Ajout du temps cumulé avec l'incrément actuel pour ce pilote
             cumulative_times_per_driver_per_lap[driver_number] = time_increment
-            # Incrément de temps pour le pilote suivant
-            time_increment += 3  # Ajout de 3 secondes à chaque pilote
-            break  # Sortie de la boucle une fois que le pilote est trouvé
+            time_increment += 3
+            break
 
         return cumulative_times_per_driver_per_lap
 
     @staticmethod
     def calculate_total_race_time(df_resultat):
+        """
+        Calcule le temps total de course par pilote.
+
+        Args:
+        - df_resultat (DataFrame): Le DataFrame contenant les résultats de la course.
+
+        Returns:
+        - total_race_time_per_driver (dict): Dictionnaire contenant les temps totaux de course par pilote.
+        """
         cumulative_times_per_driver_per_lap = {}
 
         for index, row in df_resultat.iterrows():
@@ -63,10 +98,16 @@ class Simulation:
 
     @staticmethod
     def update_ranking(total_race_time_per_driver):
-        # Tri des pilotes en fonction du temps total de la course
-        sorted_drivers = sorted(total_race_time_per_driver, key=total_race_time_per_driver.get)
+        """
+        Met à jour le classement en fonction du temps total de course.
 
-        # Transformation des numéros de pilotes en noms de pilotes
+        Args:
+        - total_race_time_per_driver (dict): Dictionnaire contenant les temps totaux de course par pilote.
+
+        Returns:
+        - sorted_driver_names (list): Liste des noms des pilotes classés par ordre de temps total croissant.
+        """
+        sorted_drivers = sorted(total_race_time_per_driver, key=total_race_time_per_driver.get)
         sorted_driver_names = [pilot_name for pilot_number in sorted_drivers for pilot_name, num in
                                Simulation.dico_pilotes.items() if num == pilot_number]
 
@@ -74,6 +115,17 @@ class Simulation:
 
     @staticmethod
     def data(df, pilote, nbr_tour):
+        """
+        Récupère les données de course pour un pilote spécifique et un tour donné.
+
+        Args:
+        - df (DataFrame): Le DataFrame contenant les données de course.
+        - pilote (string): Le nom du pilote.
+        - nbr_tour (int): Le numéro du tour.
+
+        Returns:
+        - data (DataFrame): Les données de course pour le pilote et le tour spécifiés.
+        """
         pilote = Simulation.dico_pilotes.get(pilote, None)
         tour = nbr_tour
         while True:
@@ -88,6 +140,19 @@ class Simulation:
 
     @staticmethod
     def rand_constante(air_temp, humidity, track_temp):
+        """
+        Génère des perturbations aléatoires pour les données météorologiques.
+
+        Args:
+        - air_temp (float): Température de l'air.
+        - humidity (float): Humidité.
+        - track_temp (float): Température de la piste.
+
+        Returns:
+        - air_temp_perturbe (float): Température de l'air perturbée.
+        - humidity_perturbe (float): Humidité perturbée.
+        - track_temp_perturbe (float): Température de la piste perturbée.
+        """
         perturbation_air_temp = random.uniform(-0.3, 0.3)
         perturbation_humidity = random.uniform(-0.5, 0.5)
         perturbation_track_temp = random.uniform(-0.3, 0.3)
@@ -100,6 +165,18 @@ class Simulation:
 
     @staticmethod
     def simulation(model, df, df_value_simu, stand):
+        """
+        Simule la course en prédisant les temps au tour pour chaque pilote.
+
+        Args:
+        - model: Le modèle de prédiction des temps de tour.
+        - df (DataFrame): Le DataFrame contenant les données de course.
+        - df_value_simu (DataFrame): Le DataFrame contenant les valeurs de simulation pour un pilote et un tour donnés.
+        - stand (int): Un indicateur binaire indiquant si le pilote est aux stands (1) ou non (0).
+
+        Returns:
+        - simuler (DataFrame): Le DataFrame contenant les données simulées pour chaque pilote.
+        """
         simulated_data = []
 
         pilote = df_value_simu["DriverNumber"].values[0]

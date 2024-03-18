@@ -12,9 +12,27 @@ from graphique import *
 
 
 class ChoixCircuit(QWidget):
+    """
+    Cette classe fournit un widget permettant à l'utilisateur de choisir un circuit et de lancer une simulation.
+
+    Signals:
+    - LancerSimulationClicked(str): Signal émis lorsque l'utilisateur clique sur le bouton pour lancer la simulation,
+      avec le nom du circuit sélectionné comme argument.
+
+    Methods:
+    - __init__(circuits, parent=None): Initialise le widget avec une liste de circuits.
+    - emit_signal(): Émet le signal LancerSimulationClicked avec le nom du circuit sélectionné.
+    """
     LancerSimulationClicked = pyqtSignal(str)
 
     def __init__(self, circuits, parent=None):
+        """
+        Initialise le widget ChoixCircuit.
+
+        Args:
+        - circuits (list): Liste des noms des circuits disponibles.
+        - parent (QWidget): Widget parent (par défaut None).
+        """
         super().__init__(parent)
         self.circuits = circuits
 
@@ -66,6 +84,9 @@ class ChoixCircuit(QWidget):
         self.setLayout(layout)
 
     def emit_signal(self):
+        """
+        Émet le signal LancerSimulationClicked avec le nom du circuit sélectionné.
+        """
         selected_circuit = self.circuit_combo.currentText()
         self.LancerSimulationClicked.emit(selected_circuit)
 
