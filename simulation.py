@@ -62,25 +62,11 @@ class Simulation:
         return total_race_time_per_driver
 
     @staticmethod
-    def update_ranking(df_resultat):
-        cumulative_times_per_driver_per_lap = {}
+    def update_ranking(total_race_time_per_driver):
+        # Tri des pilotes en fonction du temps total de la course
+        sorted_drivers = sorted(total_race_time_per_driver, key=total_race_time_per_driver.get)
 
-        for index, row in df_resultat.iterrows():
-            driver_number = row["DriverNumber"]
-            lap_time = row["LapTime"]
-            if driver_number in cumulative_times_per_driver_per_lap:
-                cumulative_times_per_driver_per_lap[driver_number].append(lap_time)
-            else:
-                cumulative_times_per_driver_per_lap[driver_number] = [lap_time]
-
-        num_laps = max(len(times) for times in cumulative_times_per_driver_per_lap.values())
-
-        for lap in range(1, num_laps + 1):
-            lap_cumulative_times = {}
-            for driver, times in cumulative_times_per_driver_per_lap.items():
-                if len(times) >= lap:
-                    lap_cumulative_times[driver] = times[lap - 1]
-            sorted_drivers = sorted(lap_cumulative_times, key=lambda x: lap_cumulative_times[x][0])
+        # Transformation des numéros de pilotes en noms de pilotes
         sorted_driver_names = [pilot_name for pilot_number in sorted_drivers for pilot_name, num in
                                Simulation.dico_pilotes.items() if num == pilot_number]
 

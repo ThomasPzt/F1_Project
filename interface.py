@@ -686,7 +686,7 @@ class ConditionsCourse(QWidget):
     def handle_stand_button_click(self):
         self.stand = 1
         self.stand_tours.append(self.tour)
-        self.pilotes = Simulation.update_ranking(self.df_resultat)
+        self.pilotes = Simulation.update_ranking(Simulation.calculate_total_race_time(self.df_resultat))
         self.clear_layout(self.layout)
 
         self.data = Simulation.data(self.X, self.selected_driver, self.tour)
@@ -742,7 +742,7 @@ class ConditionsCourse(QWidget):
 
         self.stand = 0
 
-        self.pilotes = Simulation.update_ranking(self.df_resultat)
+        self.pilotes = Simulation.update_ranking(Simulation.calculate_total_race_time(self.df_resultat))
         self.clear_layout(self.layout)
 
         self.data = Simulation.data(self.X, self.selected_driver, self.tour)
