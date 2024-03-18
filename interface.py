@@ -300,6 +300,7 @@ class ConditionsCourse(QWidget):
         # Créer les layouts
         self.layout = QVBoxLayout()
         self.layout_superieur = QHBoxLayout()
+        self.layout_top_end = QHBoxLayout()
         self.layout_resume = QVBoxLayout()
         self.layout_tableau = QVBoxLayout()
         self.layout_graphiques_H = QHBoxLayout()
@@ -718,6 +719,41 @@ class ConditionsCourse(QWidget):
         button_valider_pneu.clicked.connect(self.simulation)
         self.layout.addWidget(button_valider_pneu)
 
+    def fin_course_top(self):
+        fin_label = QLabel("FIN DE COURSE")
+        fin_label.setAlignment(Qt.AlignCenter)
+        fin_label.setFont(QFont("Arial", 35))
+        self.layout_resume.addWidget(fin_label)
+
+        position_label = QLabel(f"Vous avez terminé {self.pilotes.index(self.selected_driver)+1}/20", self)
+        position_label.setAlignment(Qt.AlignCenter)
+        position_label.setFont(QFont("Arial", 20))
+        position_label.setStyleSheet("color: red;")
+        self.layout_resume.addWidget(position_label)
+
+        self.layout_top_end.addLayout(self.layout_resume)
+
+    def layout_graphique_fin(self):
+        # Générer et ajouter le premier graphique
+        image_buf_1 = GraphiqueClassement.afficher_classement(self.df_resultat)
+        pixmap_1 = QPixmap()
+        pixmap_1.loadFromData(image_buf_1.getvalue())
+        #pixmap_1 = pixmap_1.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
+        label_1 = QLabel()
+        label_1.setPixmap(pixmap_1)
+        self.layout_graphiques_H.addWidget(label_1)
+        # Générer et ajouter le deuxième graphique
+        image_buf_2 = GraphiqueClassement.afficher_temps_predit(self.df_resultat, self.selected_driver,
+                                                                self.stand_tours)
+        pixmap_2 = QPixmap()
+        pixmap_2.loadFromData(image_buf_2.getvalue())
+        #pixmap_2 = pixmap_2.scaled(400, 400, aspectRatioMode=Qt.KeepAspectRatio)
+        label_2 = QLabel()
+        label_2.setPixmap(pixmap_2)
+        self.layout_graphiques_H.addWidget(label_2)
+        # Ajouter le layout vertical contenant les graphiques au layout supérieur
+        self.layout_superieur.addLayout(self.layout_graphiques_H)
+
     def simulation(self):
         if not self.tour == self.max_laps:
             print(self.stand_tours)
@@ -740,33 +776,42 @@ class ConditionsCourse(QWidget):
             else:
                 self.df_resultat = Simulation.simulation(self.model, self.X, self.df_simu, self.stand)
 
-        self.stand = 0
+            self.stand = 0
 
-        self.pilotes = Simulation.update_ranking(Simulation.calculate_total_race_time(self.df_resultat))
-        self.clear_layout(self.layout)
+            self.pilotes = Simulation.update_ranking(Simulation.calculate_total_race_time(self.df_resultat))
+            self.clear_layout(self.layout)
 
-        self.data = Simulation.data(self.X, self.selected_driver, self.tour)
+            self.data = Simulation.data(self.X, self.selected_driver, self.tour)
 
-        self.setup_layout_resume()
-        self.setup_layout_tableau()
-        self.layout_graphique()
-        self.layout.addLayout(self.layout_superieur)
+            self.setup_layout_resume()
+            self.setup_layout_tableau()
+            self.layout_graphique()
+            self.layout.addLayout(self.layout_superieur)
 
-        self.setup_layout_classement_pilotes()
-        self.setup_layout_temps_tour()
-        self.setup_layout_temps_course()
-        self.setup_layout_info_pneu()
-        self.setup_layout_tour_pneu()
-        self.layout_mid.addLayout(self.layout_classement_pilotes)  # Ajouter le layout principal
-        self.layout_mid.addLayout(self.layout_temps_tour)
-        self.layout_mid.addLayout(self.layout_temps_course)
-        self.layout_mid.addLayout(self.layout_info_pneu)  # Ajouter le layout principal
-        self.layout_mid.addLayout(self.layout_tour_pneu)
-        self.layout.addLayout(self.layout_mid)
+            self.setup_layout_classement_pilotes()
+            self.setup_layout_temps_tour()
+            self.setup_layout_temps_course()
+            self.setup_layout_info_pneu()
+            self.setup_layout_tour_pneu()
+            self.layout_mid.addLayout(self.layout_classement_pilotes)  # Ajouter le layout principal
+            self.layout_mid.addLayout(self.layout_temps_tour)
+            self.layout_mid.addLayout(self.layout_temps_course)
+            self.layout_mid.addLayout(self.layout_info_pneu)  # Ajouter le layout principal
+            self.layout_mid.addLayout(self.layout_tour_pneu)
+            self.layout.addLayout(self.layout_mid)
 
-        self.setup_layout_stand()
-        self.layout.addLayout(self.layout_pneu)
-        self.setup_button_valider_pneu()
+            self.setup_layout_stand()
+            self.layout.addLayout(self.layout_pneu)
+            self.setup_button_valider_pneu()
+
+        else:
+            self.clear_layout(self.layout)
+
+            self.fin_course_top()
+            self.layout.addLayout(self.layout_top_end)
+
+            self.layout_graphique_fin()
+            self.layout.addLayout(self.layout_superieur)
 
     def clear_layout(self, layout):
         while layout.count():
