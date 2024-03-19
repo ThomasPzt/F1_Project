@@ -164,7 +164,7 @@ class Simulation:
         return air_temp_perturbe, humidity_perturbe, track_temp_perturbe
 
     @staticmethod
-    def simulation(model, df, df_value_simu, stand):
+    def simulation(model, df, df_value_simu, stand_joueur):
         """
         Simule la course en prédisant les temps au tour pour chaque pilote.
 
@@ -192,6 +192,7 @@ class Simulation:
             type_pneu = None
             num_tour_same_type = None
             type_pneu_prec = None
+            stand = 0
             if driver == pilote_num:
                 type_pneu = df_value_simu["Compound"].values[0]
                 num_tour_same_type = df_value_simu["NumberOfLapsWithSameCompound"].values[0]
@@ -237,16 +238,19 @@ class Simulation:
                 pass
             else:
                 tmp_tour += 20
+                stand = 1
 
-            if stand == 1 and driver == pilote_num:
+            if stand_joueur == 1 and driver == pilote_num:
                 tmp_tour += 20
                 num_tour_same_type = 0
-                stand = 0
+                stand = 1
+                stand_joueur = 0
 
             tour_data = {
                 "DriverNumber": driver,
                 "LapNumber": tour,
                 "LapTime": tmp_tour,
+                "Stand": stand,
                 "Compound": type_pneu,
                 "NumberOfLapsWithSameCompound": num_tour_same_type,
                 "AirTemp": air_temp,

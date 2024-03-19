@@ -950,7 +950,6 @@ class Course(QWidget):
                     [self.df_resultat, F1_project.Simulation.simulation(self.model, self.X, self.df_simu, self.stand)])
             else:
                 self.df_resultat = F1_project.Simulation.simulation(self.model, self.X, self.df_simu, self.stand)
-            print("1")
             self.stand = 0
 
             self.pilotes = F1_project.Simulation.update_ranking(

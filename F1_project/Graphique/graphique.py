@@ -124,7 +124,8 @@ class GraphiqueClassement:
                 color = 'green' if row["LapNumber"] in stand else 'red'
                 ax.plot(row["LapNumber"], row["LapTime"], marker='o', color=color)
             else:
-                ax.plot(row["LapNumber"], row["LapTime"], marker='.', color='blue')
+                color = 'fuchsia' if row["Stand"] == 1 else 'blue'
+                ax.plot(row["LapNumber"], row["LapTime"], marker='.', color=color)
 
         ax.set_xlabel('Lap Number')
         ax.set_ylabel('Predicted Lap Time (seconds)')
@@ -133,5 +134,6 @@ class GraphiqueClassement:
 
         buf = BytesIO()
         fig.savefig(buf, format='png')
+        plt.close(fig)
         buf.seek(0)
         return buf
