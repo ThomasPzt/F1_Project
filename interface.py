@@ -7,8 +7,9 @@ from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QTimer, QSize
 from PyQt5.QtWidgets import QListWidget, QListWidgetItem, QTableWidget, QTableWidgetItem
 import requests
 import random
-from simulation import *
-from graphique import *
+import pandas as pd
+
+import F1_project
 
 
 class ChoixCircuit(QWidget):
@@ -116,8 +117,7 @@ class ChoixDriver(QWidget):
         self.setWindowTitle("Choix du pilote")
         self.circuit = circuit
 
-        # Récupérer la liste des pilotes pour le circuit sélectionné depuis le fichier CSV
-        self.drivers = list(Simulation.dico_pilotes.keys())
+        self.drivers = list(F1_project.Simulation.dico_pilotes.keys())
 
         layout = QVBoxLayout()
 
@@ -359,7 +359,7 @@ class SimulationQualidfication(QWidget):
         Returns:
         - pilotes (list): Une liste de noms de pilotes dans un ordre aléatoire.
         """
-        pilotes = list(Simulation.dico_pilotes.keys())
+        pilotes = list(F1_project.Simulation.dico_pilotes.keys())
         random.shuffle(pilotes)
         return pilotes
 
@@ -458,7 +458,7 @@ class Course(QWidget):
 
         self.setup_model()
         self.max_laps = self.X["LapNumber"].max()
-        self.data = Simulation.data(self.X, self.selected_driver, 1)
+        self.data = F1_project.Simulation.data(self.X, self.selected_driver, 1)
 
         self.setup_layout_resume()
         self.setup_layout_tableau()
@@ -505,8 +505,9 @@ class Course(QWidget):
         Initialise le modèle en utilisant les données du fichier CSV.
 
         """
-        self.X, self.y = Model.create_dataframe("data.csv", [2022, 2023], self.selected_circuit)
-        self.model = Model.train_polynomial_regression_model(self.X, self.y)
+        self.X, self.y = F1_project.Model.create_dataframe("F1_project/Modelisation/data.csv", [2022, 2023],
+                                                           self.selected_circuit)
+        self.model = F1_project.Model.train_polynomial_regression_model(self.X, self.y)
 
     def setup_layout_resume(self):
         """
@@ -578,7 +579,7 @@ class Course(QWidget):
         Configure le layout pour afficher les graphiques de classement et de temps prédit.
 
         """
-        image_buf_1 = GraphiqueClassement.afficher_classement(self.df_resultat)
+        image_buf_1 = F1_project.GraphiqueClassement.afficher_classement(self.df_resultat)
         pixmap_1 = QPixmap()
         pixmap_1.loadFromData(image_buf_1.getvalue())
         pixmap_1 = pixmap_1.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
@@ -586,8 +587,8 @@ class Course(QWidget):
         label_1.setPixmap(pixmap_1)
         self.layout_graphiques_H.addWidget(label_1)
 
-        image_buf_2 = GraphiqueClassement.afficher_temps_predit(self.df_resultat, self.selected_driver,
-                                                                self.stand_tours)
+        image_buf_2 = F1_project.GraphiqueClassement.afficher_temps_predit(self.df_resultat, self.selected_driver,
+                                                                           self.stand_tours)
         pixmap_2 = QPixmap()
         pixmap_2.loadFromData(image_buf_2.getvalue())
         pixmap_2 = pixmap_2.scaled(400, 400, aspectRatioMode=Qt.KeepAspectRatio)
@@ -626,7 +627,7 @@ class Course(QWidget):
         graphique_label.setStyleSheet("font-size: 20px; font-weight: bold;")
         self.layout_temps_tour.addWidget(graphique_label)
         for pilote in self.pilotes:
-            pilote_num = Simulation.dico_pilotes.get(pilote, None)
+            pilote_num = F1_project.Simulation.dico_pilotes.get(pilote, None)
             if self.tour == 0:
                 tmps_tour = 0.0
             else:
@@ -652,12 +653,12 @@ class Course(QWidget):
         graphique_label.setStyleSheet("font-size: 20px; font-weight: bold;")
         self.layout_temps_course.addWidget(graphique_label)
 
-        total_race_time = Simulation.calculate_total_race_time(self.df_resultat)
+        total_race_time = F1_project.Simulation.calculate_total_race_time(self.df_resultat)
         for pilote in self.pilotes:
             if self.tour == 0:
                 total_time = 0.0
             else:
-                pilote_num = Simulation.dico_pilotes.get(pilote, None)
+                pilote_num = F1_project.Simulation.dico_pilotes.get(pilote, None)
 
                 total_time = total_race_time[pilote_num][0]
 
@@ -681,14 +682,14 @@ class Course(QWidget):
         self.layout_info_pneu.addWidget(info_pneu_label)
 
         for pilote in self.pilotes:
-            pilote_num = Simulation.dico_pilotes.get(pilote, None)
+            pilote_num = F1_project.Simulation.dico_pilotes.get(pilote, None)
             if self.tour == 0:
                 if pilote == self.selected_driver:
                     pneu = self.pneu
                 else:
                     pilote_df = self.X[self.X["DriverNumber"] == pilote_num]
                     type_pneu = pilote_df["Compound"].values[0]
-                    pneu = next(key for key, val in Model.dico.items() if val == type_pneu)
+                    pneu = next(key for key, val in F1_project.Model.dico.items() if val == type_pneu)
             else:
                 if pilote == self.selected_driver:
                     pneu = self.pneu
@@ -697,7 +698,7 @@ class Course(QWidget):
                         (self.df_resultat["DriverNumber"] == pilote_num) & (
                                 self.df_resultat["LapNumber"] == self.tour)][
                         "Compound"].values[0]
-                    pneu = next(key for key, val in Model.dico.items() if val == type_pneu)
+                    pneu = next(key for key, val in F1_project.Model.dico.items() if val == type_pneu)
 
             label_pneu = QLabel(f"{pneu}", self)
             label_pneu.setAlignment(Qt.AlignCenter)
@@ -718,7 +719,7 @@ class Course(QWidget):
         self.layout_tour_pneu.addWidget(tour_pneu_label)
 
         for pilote in self.pilotes:
-            pilote_num = Simulation.dico_pilotes.get(pilote, None)
+            pilote_num = F1_project.Simulation.dico_pilotes.get(pilote, None)
             if pilote == self.selected_driver:
                 num_tour_same_type = self.num_tour_same_compounds
             else:
@@ -847,11 +848,12 @@ class Course(QWidget):
 
         """
         self.stand = 1
-        self.stand_tours.append(self.tour+1)
-        self.pilotes = Simulation.update_ranking(Simulation.calculate_total_race_time(self.df_resultat))
+        self.stand_tours.append(self.tour + 1)
+        self.pilotes = F1_project.Simulation.update_ranking(
+            F1_project.Simulation.calculate_total_race_time(self.df_resultat))
         self.clear_layout(self.layout)
 
-        self.data = Simulation.data(self.X, self.selected_driver, self.tour)
+        self.data = F1_project.Simulation.data(self.X, self.selected_driver, self.tour)
 
         self.setup_layout_resume()
         self.setup_layout_tableau()
@@ -893,7 +895,7 @@ class Course(QWidget):
         fin_label.setFont(QFont("Arial", 35))
         self.layout_resume.addWidget(fin_label)
 
-        position_label = QLabel(f"Vous avez terminé {self.pilotes.index(self.selected_driver)+1}/20", self)
+        position_label = QLabel(f"Vous avez terminé {self.pilotes.index(self.selected_driver) + 1}/20", self)
         position_label.setAlignment(Qt.AlignCenter)
         position_label.setFont(QFont("Arial", 20))
         position_label.setStyleSheet("color: red;")
@@ -906,19 +908,19 @@ class Course(QWidget):
         Configure le layout pour afficher les graphiques à la fin de la course.
 
         """
-        image_buf_1 = GraphiqueClassement.afficher_classement(self.df_resultat)
+        image_buf_1 = F1_project.GraphiqueClassement.afficher_classement(self.df_resultat)
         pixmap_1 = QPixmap()
         pixmap_1.loadFromData(image_buf_1.getvalue())
-        #pixmap_1 = pixmap_1.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
+        # pixmap_1 = pixmap_1.scaled(500, 500, aspectRatioMode=Qt.KeepAspectRatio)
         label_1 = QLabel()
         label_1.setPixmap(pixmap_1)
         self.layout_graphiques_H.addWidget(label_1)
 
-        image_buf_2 = GraphiqueClassement.afficher_temps_predit(self.df_resultat, self.selected_driver,
-                                                                self.stand_tours)
+        image_buf_2 = F1_project.GraphiqueClassement.afficher_temps_predit(self.df_resultat, self.selected_driver,
+                                                                           self.stand_tours)
         pixmap_2 = QPixmap()
         pixmap_2.loadFromData(image_buf_2.getvalue())
-        #pixmap_2 = pixmap_2.scaled(400, 400, aspectRatioMode=Qt.KeepAspectRatio)
+        # pixmap_2 = pixmap_2.scaled(400, 400, aspectRatioMode=Qt.KeepAspectRatio)
         label_2 = QLabel()
         label_2.setPixmap(pixmap_2)
         self.layout_graphiques_H.addWidget(label_2)
@@ -938,23 +940,24 @@ class Course(QWidget):
             self.df_simu = pd.DataFrame({
                 "DriverNumber": [self.selected_driver],
                 "LapNumber": [self.tour],
-                "Compound": [Model.dico[self.pneu]],
+                "Compound": [F1_project.Model.dico[self.pneu]],
                 "NumberOfLapsWithSameCompound": [self.num_tour_same_compounds]
             })
 
             # Exécuter la simulation
             if not self.tour == 1:
                 self.df_resultat = pd.concat(
-                    [self.df_resultat, Simulation.simulation(self.model, self.X, self.df_simu, self.stand)])
+                    [self.df_resultat, F1_project.Simulation.simulation(self.model, self.X, self.df_simu, self.stand)])
             else:
-                self.df_resultat = Simulation.simulation(self.model, self.X, self.df_simu, self.stand)
-
+                self.df_resultat = F1_project.Simulation.simulation(self.model, self.X, self.df_simu, self.stand)
+            print("1")
             self.stand = 0
 
-            self.pilotes = Simulation.update_ranking(Simulation.calculate_total_race_time(self.df_resultat))
+            self.pilotes = F1_project.Simulation.update_ranking(
+                F1_project.Simulation.calculate_total_race_time(self.df_resultat))
             self.clear_layout(self.layout)
 
-            self.data = Simulation.data(self.X, self.selected_driver, self.tour)
+            self.data = F1_project.Simulation.data(self.X, self.selected_driver, self.tour)
 
             self.setup_layout_resume()
             self.setup_layout_tableau()
@@ -1027,6 +1030,7 @@ class HomePage(QMainWindow):
     - courses: Gère la simulation de la course.
     - lancer_course: Lance la course.
     """
+
     def __init__(self):
         """
         Initialise la page d'accueil du simulateur F1.
@@ -1163,6 +1167,7 @@ class HomePage(QMainWindow):
         course_choix = Course(selected_circuit, selected_driver, pilotes, self)
         self.setCentralWidget(course_choix)
         print(f"Course lancée avec le pilote {selected_driver} dans le cricuit {selected_circuit}")
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

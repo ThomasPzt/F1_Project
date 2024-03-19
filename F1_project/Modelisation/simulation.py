@@ -1,5 +1,5 @@
 import random
-from model import *
+from .model import *
 
 
 class Simulation:
@@ -178,7 +178,6 @@ class Simulation:
         - simuler (DataFrame): Le DataFrame contenant les données simulées pour chaque pilote.
         """
         simulated_data = []
-
         pilote = df_value_simu["DriverNumber"].values[0]
         pilote_num = Simulation.dico_pilotes.get(pilote, None)
         tour = df_value_simu["LapNumber"].values[0]
@@ -218,6 +217,7 @@ class Simulation:
                             num_tour_same_type = pilote_df["NumberOfLapsWithSameCompound"].values[0]
                         else:
                             tour_pilote -= 1
+
 
             tmp_tour = Model.predict_lap_time(model, driver, tour, type_pneu, estimated_fuel,
                                               num_tour_same_type,
