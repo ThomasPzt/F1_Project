@@ -190,7 +190,8 @@ class Simulation:
 
         for driver in Simulation.liste_pilotes:
             type_pneu = None
-            num_tour_same_type = None  # Réinitialisation pour chaque pilote
+            num_tour_same_type = None
+            type_pneu_prec = None
             if driver == pilote_num:
                 type_pneu = df_value_simu["Compound"].values[0]
                 num_tour_same_type = df_value_simu["NumberOfLapsWithSameCompound"].values[0]
@@ -218,10 +219,24 @@ class Simulation:
                         else:
                             tour_pilote -= 1
 
+                tour_prec = tour_pilote-1
+                pilote_df = pd.DataFrame()
+
+                while pilote_df.empty and tour_prec > 1:
+                    pilote_df = df[(df["DriverNumber"] == driver) & (df["LapNumber"] == tour_prec)]
+                    if not pilote_df.empty:
+                        type_pneu_prec = pilote_df["Compound"].values[0]
+                    else:
+                        tour_prec -= 1
 
             tmp_tour = Model.predict_lap_time(model, driver, tour, type_pneu, estimated_fuel,
                                               num_tour_same_type,
                                               air_temp, humidity, rainfall, track_temp)
+
+            if type_pneu_prec == type_pneu or type_pneu_prec is None:
+                pass
+            else:
+                tmp_tour += 20
 
             if stand == 1 and driver == pilote_num:
                 tmp_tour += 20
