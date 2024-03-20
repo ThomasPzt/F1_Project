@@ -101,6 +101,7 @@ class GraphiqueClassement:
         # Sauvegarde du graphique dans un fichier temporaire
         buf = BytesIO()
         fig.savefig(buf, format='png')
+        plt.close(fig)
         buf.seek(0)
         return buf
 
