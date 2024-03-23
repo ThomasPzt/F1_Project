@@ -36,8 +36,6 @@ class ChoixCircuit(QWidget):
         """
         super().__init__(parent)
         self.circuits = circuits
-
-        # Création du layout vertical pour organiser les widgets
         layout = QVBoxLayout()
 
         label_choix_circuit = QLabel("Choisissez votre circuit", self)
@@ -117,8 +115,17 @@ class ChoixDriver(QWidget):
         self.setWindowTitle("Choix du pilote")
         self.circuit = circuit
 
-        self.drivers = list(F1_project.Simulation.dico_pilotes.keys())
-
+        data = pd.read_csv("F1_project/Modelisation/data.csv")
+        circuit_number = F1_project.Model.dico_circuit.get(self.circuit, None)
+        selected_data = data[(data['Year'] == 2023) & (data['CircuitNumber'] == circuit_number)]
+        driver_numbers = selected_data['DriverNumber'].unique()
+        inverse_dico_pilotes = {number: name for name, number in F1_project.Simulation.dico_pilotes.items()}
+        driver_list = []
+        for driver_number in driver_numbers:
+            driver_name = inverse_dico_pilotes.get(driver_number, None)
+            if driver_name:
+                driver_list.append(driver_name)
+        self.drivers = list(set(driver_list))
         layout = QVBoxLayout()
 
         label_pilote = QLabel(f"Choisissez votre pilote pour le circuit {circuit}", self)
